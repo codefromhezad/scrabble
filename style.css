@@ -15,6 +15,33 @@ html, body {
 	position: relative;
 }
 
+.letter-tile {
+	position: relative;
+    text-transform: uppercase;
+    width: 45px;
+    height: 49px;
+    margin: 3px;
+    float: left;
+    display: block;
+    background: #e0cc9b;
+    text-align: center;
+    line-height: 40px;
+    font-weight: bold;
+    font-size: 21px;
+    text-indent: -2px;
+    box-shadow: 0px 6px 0px 0px #b1a078, 0px 7px 2px 1px rgba(0, 0, 0, 0.3), 0px 7px 0px 0px rgba(82, 74, 55, 0.92);
+    border-radius: 5px;
+    border-top: 1px solid #fbf4e2;
+}
+
+.letter-tile sub {
+	position: absolute;
+    font-size: 11px;
+    line-height: 14px;
+    bottom: 6px;
+    right: 7px;
+}
+
 #board {
 	position: relative;
 	top: 50px;
@@ -36,12 +63,18 @@ html, body {
 }
 
 #board .inner-wrapper .cell {
-	width: 45px;
-	height: 45px;
+	width: 51px;
+    height: 52px;
 	border-bottom: 3px solid #f7f0df;
 	border-right: 3px solid #f7f0df;
 	float: left;
 	background: #cdc6aa;
+}
+
+#board .inner-wrapper .cell .letter-tile {
+	float: none;
+	margin: auto;
+	top: -7px;
 }
 
 #info-pane {
@@ -49,7 +82,7 @@ html, body {
 	top: 0;
 	right: 0;
 	height: 100%;
-	width: 300px;
+	width: 400px;
 	background: #f7f0df;
 	border-left: 4px solid #cdc6aa;
 }
@@ -61,4 +94,9 @@ html, body {
 
 #info-pane .info-block h3 {
 	text-transform: uppercase;
+}
+
+#info-pane .info-block .info-player-letters-holder {
+	padding-bottom: 11px;
+	overflow: hidden;
 }

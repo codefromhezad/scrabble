@@ -1,4 +1,5 @@
 var GAME_NUM_CELLS_PER_SIDE = 15;
+var GAME_NUM_LETTERS_PER_PLAYER = 7;
 
 var Game = {
 	settings: {
@@ -43,6 +44,12 @@ var Game = {
 			'<div id="info-block-current-turn" class="info-block">'+
 				'<h3>Joueur actif</h3>'+
 				'<div id="info-current-player-name-value"></div>'+
+			'</div>'+
+			'<div id="info-block-player-letters" class="info-block">'+
+				'<h3>Vos lettres</h3>'+
+				'<div class="info-player-letters-holder">'+
+					'<div id="info-player-letters-value"></div>'+
+				'</div>'+
 			'</div>';
 		info_pane_node.innerHTML = info_pane_html;
 		Game.root_node.appendChild(info_pane_node);
@@ -76,7 +83,7 @@ var Game = {
 		/* Select starting player randomly */
 		var starting_player_id = Game.get_random_player_id();
 		Game.set_playing_player(starting_player_id);
-	
+		
 	},
 
 	load_lang_distribution_data: function(lang_slug) {
@@ -125,9 +132,47 @@ var Game = {
 	set_playing_player: function(player_id) {
 		Game.current_playing_player = Game.players[player_id];
 		document.getElementById('info-current-player-name-value').innerHTML = Game.current_playing_player.name;
+
+		Game.draw_letters_for_player(player_id);
 	},
 
-	draw_random_letters: function(num_letters_to_draw) {
+	generate_letter_tile_html: function(letter) {
+		var letter_score = Game.distribution_data[letter].score_value;
 
+		var letter_html = letter;
+		var letter_score_html = letter_score;
+
+		if( letter == '[blank]' ) {
+			letter_html = ' ';
+			letter_score_html = ' ';
+		}
+
+		return '<span class="letter-tile" '+
+			'data-letter="'+letter+'" '+
+			'data-score="'+letter_score+'">'+
+				letter_html+
+				'<sub>'+letter_score_html+'</sub>'
+			'</span>';
+	},
+
+	draw_letters_for_player: function(player_id) {
+		var player = Game.players[player_id];
+		var num_letters_to_draw = GAME_NUM_LETTERS_PER_PLAYER - player.letters_pool.length;
+
+		for(var i = 0; i < num_letters_to_draw; i++) {
+			var available_letters = Object.keys(Game.game_letters_pool);
+			var selected_letter = available_letters[ Math.floor(Math.random() * available_letters.length) ];
+
+			Game.game_letters_pool[selected_letter] -= 1;
+			if( Game.game_letters_pool[selected_letter] <= 0 ) {
+				delete Game.game_letters_pool[selected_letter];
+			}
+
+			player.letters_pool.push(selected_letter);
+
+			var info_letters_div_html = document.getElementById('info-player-letters-value').innerHTML;
+
+			document.getElementById('info-player-letters-value').innerHTML = info_letters_div_html + Game.generate_letter_tile_html(selected_letter);
+		}
 	}
 }
