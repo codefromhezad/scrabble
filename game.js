@@ -18,6 +18,7 @@ var Game = {
 
 
 
+
 	/***************
 	* INIT METHODS *
 	****************/
@@ -83,7 +84,10 @@ var Game = {
 		/* Select starting player randomly */
 		var starting_player_id = Game.get_random_player_id();
 		Game.set_playing_player(starting_player_id);
-		
+
+
+		/* Init UX vendor libraries */
+		Game.init_ux_libraries();
 	},
 
 	load_lang_distribution_data: function(lang_slug) {
@@ -120,6 +124,92 @@ var Game = {
 		Game.root_node.appendChild(Game.board_node);
 	},
 
+	init_ux_libraries: function() {
+
+		var dragged_letter_index_in_player_pool;
+		var droppable_target = null;
+		var draggable_start_pos = {x: 0, y: 0};
+
+		/* Dragging letters from player pool */
+		interact('#info-block-player-letters .letter-tile')
+		.draggable({
+			inertia: false,
+			autoScroll: true,
+
+			onstart: function(event) {
+				droppable_target = null;
+				dragged_letter_index_in_player_pool = [].indexOf.call(event.target.parentNode.children, event.target);
+			},
+
+			onmove: function(event) {
+				var target = event.target,
+			        x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx,
+			        y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+
+			    target.style.webkitTransform =
+			    target.style.transform =
+			      'translate(' + x + 'px, ' + y + 'px)';
+
+			    target.setAttribute('data-x', x);
+			    target.setAttribute('data-y', y);
+			    target.setAttribute('data-dragging', 1);
+			},
+
+			onend: function (event) {
+				var draggableTarget = event.target;
+				draggableTarget.setAttribute('data-dragging', 0);
+
+				if( droppable_target ) {
+					droppable_target.appendChild(draggableTarget);
+					droppable_target.classList.remove('droppable-over');
+
+					droppable_target.setAttribute('data-letter', draggableTarget.getAttribute('data-letter'));
+
+					Game.current_playing_player.letters_pool.splice(dragged_letter_index_in_player_pool, 1);
+				}
+
+				draggableTarget.setAttribute('data-x', 0);
+		    	draggableTarget.setAttribute('data-y', 0);
+
+		    	draggableTarget.style.webkitTransform =
+			    draggableTarget.style.transform =
+			    	'translate(0px, 0px)';
+		    }
+		});
+
+		/* Dropping letter on board */
+		interact('#board .cell')
+		.dropzone({
+			overlap: 'pointer',
+
+			ondragenter: function (event) {
+				var draggableElement = event.relatedTarget,
+				    dropzoneElement = event.target;
+
+				dropzoneElement.classList.add('droppable-over');
+				//draggableElement.classList.add('can-drop');
+			},
+
+			ondragleave: function (event) {
+				var draggableElement = event.relatedTarget,
+				    dropzoneElement = event.target;
+
+				dropzoneElement.classList.remove('droppable-over');
+				//draggableElement.classList.remove('can-drop');
+			},
+
+			ondrop: function (event) {
+				var draggableElement = event.relatedTarget,
+				    dropzoneElement = event.target;
+				
+				// @TODO: Check the cell is free before setting dragndrop_success to true
+				droppable_target = dropzoneElement;
+
+				/* The actual tile placement takes place in draggable.onend callback */
+			}
+		})
+	},
+
 
 	/*******************
 	* GAMEPLAY METHODS *
@@ -141,13 +231,15 @@ var Game = {
 
 		var letter_html = letter;
 		var letter_score_html = letter_score;
+		var blank_class = '';
 
 		if( letter == '[blank]' ) {
-			letter_html = ' ';
-			letter_score_html = ' ';
+			letter_html = '*';
+			letter_score_html = '*';
+			blank_class = 'is-blank';
 		}
 
-		return '<span class="letter-tile" '+
+		return '<span class="letter-tile '+blank_class+'" '+
 			'data-letter="'+letter+'" '+
 			'data-score="'+letter_score+'">'+
 				letter_html+
