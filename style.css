@@ -2,7 +2,8 @@ html, body {
 	margin: 0;
 	padding: 0;
 	font-size: 16px;
-	font-family: Helvetica, Arial, Verdana, Sans;
+	font-family: 'News Cycle', Helvetica, Arial, Verdana, Sans;
+	color: #342f29;
 }
 
 * {
@@ -56,4 +57,8 @@ html, body {
 #info-pane .info-block {
 	padding: 20px;
 	border-bottom: 4px solid #cdc6aa;
+}
+
+#info-pane .info-block h3 {
+	text-transform: uppercase;
 }
