@@ -221,7 +221,7 @@ var Game = {
 
 	set_playing_player: function(player_id) {
 		Game.current_playing_player = Game.players[player_id];
-		document.getElementById('info-current-player-name-value').innerHTML = Game.current_playing_player.name;
+		document.getElementById('info-current-player-name-value').innerHTML = Game.current_playing_player.name + ' <small>('+Game.current_playing_player.type.toUpperCase()+')</small>';
 
 		Game.draw_letters_for_player(player_id);
 	},
