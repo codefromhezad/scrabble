@@ -104,6 +104,10 @@ html, body {
 	text-transform: uppercase;
 }
 
+#info-pane .info-block #info-current-player-name-value .player-score {
+	float: right;
+}
+
 #info-pane .info-block .info-player-letters-holder {
 	padding-bottom: 11px;
 }
