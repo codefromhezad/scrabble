@@ -28,9 +28,16 @@ html, body {
     font-weight: bold;
     font-size: 21px;
     text-indent: -2px;
-    box-shadow: 0px 6px 0px 0px #b1a078, 0px 7px 2px 1px rgba(0, 0, 0, 0.3), 0px 7px 0px 0px rgba(82, 74, 55, 0.92);
+    box-shadow: 0px 6px 0px 0px #b1a078, 0px 7px 2px 1px rgba(0, 0, 0, 0.3), 0px 7px 0px 0px rgba(82, 74, 55, 0.52);
     border-radius: 5px;
     border-top: 1px solid #fbf4e2;
+
+    -webkit-touch-callout: none;
+    -webkit-user-select: none; 
+    -khtml-user-select: none; 
+    -moz-user-select: none; 
+    -ms-user-select: none; 
+    user-select: none; 
 }
 
 .letter-tile.is-blank {
@@ -104,10 +111,76 @@ html, body {
 	text-transform: uppercase;
 }
 
-#info-pane .info-block #info-current-player-name-value .player-score {
-	float: right;
+#info-pane .info-block#info-block-current-turn dl {
+	overflow: hidden;
+}
+
+#info-pane .info-block#info-block-current-turn dt {
+	float: left;
+	display: block;
+	width: 50%;
+}
+
+#info-pane .info-block#info-block-current-turn dd {
+	float: left;
+	display: block;
+	width: 50%;
+}
+
+#info-pane .info-block#info-block-current-turn dt.current,
+#info-pane .info-block#info-block-current-turn dd.current {
+	font-weight: bold;
 }
 
 #info-pane .info-block .info-player-letters-holder {
 	padding-bottom: 11px;
+}
+
+#info-pane .info-block .info-player-letters-holder #info-player-letters-value {
+	min-height: 56px;
+}
+
+#info-pane .info-block#info-block-actions a {
+	position: relative;
+    text-transform: uppercase;
+    width: auto;
+    height: 39px;
+    line-height: 39px;
+    text-decoration: none;
+    color: #243532;
+    margin: 3px;
+    display: inline-block;
+    background: #96c1ba;
+    text-align: center;
+    font-weight: bold;
+    font-size: 15px;
+    text-indent: -2px;
+    box-shadow: 0px 6px 0px 0px #55827a, 0px 7px 2px 1px rgba(0, 0, 0, 0.3), 0px 7px 0px 0px rgba(55, 82, 82, 0.52);
+    border-radius: 5px;
+    padding: 0 14px;
+    border-top: 1px solid #fbf4e2;
+
+    -webkit-touch-callout: none;
+    -webkit-user-select: none; 
+    -khtml-user-select: none; 
+    -moz-user-select: none; 
+    -ms-user-select: none; 
+    user-select: none; 
+}
+
+#info-pane .info-block#info-block-actions a:hover,
+#info-pane .info-block#info-block-actions a:focus {
+	background: #a2d0c8;
+}
+
+#info-pane .info-block#info-block-actions a:active {
+	box-shadow: 0px 2px 0px 0px #55827a, 0px 3px 2px 1px rgba(0, 0, 0, 0.3), 0px 3px 0px 0px rgba(55, 82, 82, 0.52);
+	transform: translateY(3px);
+}
+
+#info-pane .info-block#info-block-actions a.disabled {
+	background: #c1c1c1 !important;
+	box-shadow: 0px 6px 0px 0px #797979, 0px 7px 2px 1px rgba(0, 0, 0, 0.3), 0px 7px 0px 0px rgba(78, 78, 78, 0.52) !important;
+	color: #333333 !important;
+	transform: translateY(0) !important;
 }

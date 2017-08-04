@@ -33,28 +33,6 @@ var Game = {
 		}
 
 
-		/* Generate board node and inner board cells */
-		Game.generate_board_node();
-
-
-		/* Generate info-pane node */
-		var info_pane_node = document.createElement('div');
-		info_pane_node.setAttribute('id', 'info-pane');
-
-		var info_pane_html = 
-			'<div id="info-block-current-turn" class="info-block">'+
-				'<h3>Joueur actif</h3>'+
-				'<div id="info-current-player-name-value"></div>'+
-			'</div>'+
-			'<div id="info-block-player-letters" class="info-block">'+
-				'<h3>Vos lettres</h3>'+
-				'<div class="info-player-letters-holder">'+
-					'<div id="info-player-letters-value"></div>'+
-				'</div>'+
-			'</div>';
-		info_pane_node.innerHTML = info_pane_html;
-		Game.root_node.appendChild(info_pane_node);
-
 		/* Load current lang letters distribution and score data */
 		if( ! Game.load_lang_distribution_data(Game.settings.game_lang) ) {
 			return false;
@@ -74,20 +52,69 @@ var Game = {
 		}
 
 		Game.players = players_data;
+		var players_list_dl_html = '';
 
 		for(var i = 0; i < Game.players.length; i++) {
+			Game.players[i].id = i;
 			Game.players[i].current_score = 0;
 			Game.players[i].letters_pool = [];
+			Game.players[i].next_player_id = ( (i + 1) < Game.players.length ? (i + 1) : 0 );
+
+			players_list_dl_html += 
+				'<dt id="info-players-name-'+i+'" class="info-player-name">'+Game.players[i].name+' <small>('+Game.players[i].type+')</small></dt>'+
+				'<dd id="info-players-score-'+i+'" class="info-player-score">'+Game.players[i].current_score+' points</dd>';
 		}
+
+
+		/* Generate board node and inner board cells */
+		Game.generate_board_node();
+
+
+		/* Generate info-pane node */
+		var info_pane_node = document.createElement('div');
+		info_pane_node.setAttribute('id', 'info-pane');
+
+		var info_pane_html = 
+			'<div id="info-block-current-turn" class="info-block">'+
+				'<h3>Joueurs</h3>'+
+				'<dl id="players-list">'+
+					players_list_dl_html +
+				'</dl>'+
+			'</div>'+
+			'<div id="info-block-player-letters" class="info-block">'+
+				'<h3>Vos lettres</h3>'+
+				'<div class="info-player-letters-holder">'+
+					'<div id="info-player-letters-value"></div>'+
+				'</div>'+
+			'</div>' +
+			'<div id="info-block-actions" class="info-block">' +
+				'<a href="#" id="info-action-next-turn-button" class="disabled">Tour suivant</a>' +
+			'</div>';
+		info_pane_node.innerHTML = info_pane_html;
+		Game.root_node.appendChild(info_pane_node);
+
+
+		/* Init starting players letters pool */
+		for(var i = 0; i < Game.players.length; i++) {
+			Game.pick_letters_for_player(Game.players[i].id);
+
+			if( Game.players[i].active ) {
+				Game.render_player_letters_pool(Game.players[i].id);
+			}
+		}
+
+
+		/* Init UX vendor libraries */
+		Game.init_ux_libraries();
+
+
+		/* Register / Setup UX event listeners */
+		Game.register_ux_listeners();
 
 
 		/* Select starting player randomly */
 		var starting_player_id = Game.get_random_player_id();
 		Game.set_playing_player(starting_player_id);
-
-
-		/* Init UX vendor libraries */
-		Game.init_ux_libraries();
 	},
 
 	load_lang_distribution_data: function(lang_slug) {
@@ -124,6 +151,21 @@ var Game = {
 		Game.root_node.appendChild(Game.board_node);
 	},
 
+	register_ux_listeners: function() {
+		document.getElementById('info-action-next-turn-button').addEventListener('click', function(event) {
+			event.preventDefault();
+			
+			if( event.target.classList.contains('disabled') ) {
+				return false;
+			}
+
+			// @TODO
+			// Check player entry validity, calculate player score
+			Game.set_playing_player(Game.current_playing_player.next_player_id);
+
+		}, false);
+	},
+
 	init_ux_libraries: function() {
 
 		var dragged_letter_index_in_player_pool;
@@ -131,7 +173,7 @@ var Game = {
 		var draggable_start_pos = {x: 0, y: 0};
 
 		/* Dragging letters from player pool */
-		interact('#info-block-player-letters .letter-tile')
+		interact('#info-block-player-letters:not(.disabled) .letter-tile')
 		.draggable({
 			inertia: false,
 			autoScroll: true,
@@ -221,12 +263,33 @@ var Game = {
 
 	set_playing_player: function(player_id) {
 		Game.current_playing_player = Game.players[player_id];
-		document.getElementById('info-current-player-name-value').innerHTML = 
-			Game.current_playing_player.name + 
-			' <span class="player-type">('+Game.current_playing_player.type.toUpperCase()+')</span>' + 
-			'<span class="player-score">'+Game.current_playing_player.current_score+' points</span>';
+		var current_player_is_active_player = !! Game.current_playing_player.active;
 
-		Game.draw_letters_for_player(player_id);
+		if( current_player_is_active_player ) {
+			document.getElementById('info-block-player-letters').classList.remove('disabled');
+		} else {
+			document.getElementById('info-block-player-letters').classList.add('disabled');
+		}
+
+		/* Update Players list Ux (show currently playing player) */
+		var player_name_nodes = document.querySelectorAll('.info-player-name');
+		for(var n = 0; n < player_name_nodes.length; n++) {
+			player_name_nodes[n].classList.remove('current');
+		}
+		document.getElementById('info-players-name-'+Game.current_playing_player.id).classList.add('current');
+
+
+		/* Pick letters for player */
+		Game.pick_letters_for_player(player_id);
+
+
+		/* Update letters indicator if playing player is active */
+		if(Game.current_playing_player.active) {
+			Game.render_player_letters_pool(Game.current_playing_player.id);
+			document.getElementById('info-action-next-turn-button').classList.remove('disabled');
+		} else {
+			document.getElementById('info-action-next-turn-button').classList.add('disabled');
+		}
 	},
 
 	generate_letter_tile_html: function(letter) {
@@ -246,11 +309,11 @@ var Game = {
 			'data-letter="'+letter+'" '+
 			'data-score="'+letter_score+'">'+
 				letter_html+
-				'<sub>'+letter_score_html+'</sub>'
+				'<sub>'+letter_score_html+'</sub>'+
 			'</span>';
 	},
 
-	draw_letters_for_player: function(player_id) {
+	pick_letters_for_player: function(player_id) {
 		var player = Game.players[player_id];
 		var num_letters_to_draw = GAME_NUM_LETTERS_PER_PLAYER - player.letters_pool.length;
 
@@ -264,10 +327,17 @@ var Game = {
 			}
 
 			player.letters_pool.push(selected_letter);
-
-			var info_letters_div_html = document.getElementById('info-player-letters-value').innerHTML;
-
-			document.getElementById('info-player-letters-value').innerHTML = info_letters_div_html + Game.generate_letter_tile_html(selected_letter);
 		}
+	},
+
+	render_player_letters_pool: function(player_id) {
+		var player = Game.players[player_id];
+
+		var letters_pool_html = '';
+		for(var i = 0; i < player.letters_pool.length; i++) {
+			letters_pool_html += Game.generate_letter_tile_html(player.letters_pool[i]);
+		}
+
+		document.getElementById('info-player-letters-value').innerHTML = letters_pool_html;
 	}
 }
