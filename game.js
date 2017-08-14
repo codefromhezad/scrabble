@@ -61,7 +61,6 @@ var Game = {
 			Game.players[i].current_word = "";
 			Game.players[i].current_word_cells_id = [];
 			Game.players[i].current_allowed_cells = null;
-			Game.players[i].previously_placed_letter_cell_id = null;
 			Game.players[i].letters_pool = [];
 			Game.players[i].next_player_id = ( (i + 1) < Game.players.length ? (i + 1) : 0 );
 
@@ -207,7 +206,7 @@ var Game = {
 				draggableTarget.setAttribute('data-dragging', 0);
 
 				// If user dropped letter on valid node (A cell from the board)
-				// @TODO: Check the cell is empty
+				// @TODO: Check the cell is allowed
 				if( droppable_target ) {
 					var selected_letter = draggableTarget.getAttribute('data-letter');
 					var selected_cell_id = parseInt(droppable_target.getAttribute('data-index'));
@@ -224,46 +223,18 @@ var Game = {
 					Game.current_playing_player.current_word += selected_letter;
 					Game.current_playing_player.current_word_cells_id.push(selected_cell_id);
 
-					// When a second letter has been placed, find the direction (horizontal or vertical)
-					// of the currently played word.
-					if( Game.current_playing_player.current_word.length == 2 ) {
-						var prev_coords = Game.conv_1d_to_2d(Game.current_playing_player.previously_placed_letter_cell_id);
-						var curr_coords = Game.conv_1d_to_2d(selected_cell_id);
-
-						if( prev_coords[0] == curr_coords[0] ) {
-							Game.current_playing_player.current_word_direction = "vertical";
-						} else if( prev_coords[1] == curr_coords[1] ) {
-							Game.current_playing_player.current_word_direction = "horizontal";
-						} else {
-							console.error('Wat? Where the fuck did you place that letter ??');
-							return;
-						}
-					}
-
-					Game.current_playing_player.previously_placed_letter_cell_id = selected_cell_id;
-
-					// Highlight valid cells for letter placement
-					var col_cells = Game.get_column_cells_id_from_one_cell_id(selected_cell_id);
-					var row_cells = Game.get_row_cells_id_from_one_cell_id(selected_cell_id);
-
-					var cells_to_highlight;
-
-					if( Game.current_playing_player.current_word_direction == null ) {
-						cells_to_highlight = col_cells.concat(row_cells);
-					} else if( Game.current_playing_player.current_word_direction == "horizontal") {
-						cells_to_highlight = row_cells;
-					} else if( Game.current_playing_player.current_word_direction == "vertical" ) {
-						cells_to_highlight = col_cells;
-					} else {
-						console.error('Wat? current_playing_player.current_word_direction is neither null, "horizontal" nor "vertical". That makes no sense. Contact the developer to insult him.');
-						return;
-					}
-					
-					Game.current_playing_player.current_allowed_cells = cells_to_highlight;
-					Game.highlight_cells(cells_to_highlight);
-
 					// Update player's letters pool (removes the dropped letter)
 					Game.current_playing_player.letters_pool.splice(dragged_letter_index_in_player_pool, 1);
+
+					// When a second letter has been placed, find the direction (horizontal or vertical)
+					// of the currently played word.
+					Game.find_current_word_direction();
+
+					// Find allowed cells after player's move
+					Game.find_allowed_cells();
+
+					// Highlight valid cells for letter placement
+					Game.highlight_cells(Game.current_playing_player.current_allowed_cells);
 				}
 
 				draggableTarget.setAttribute('data-x', 0);
@@ -394,6 +365,57 @@ var Game = {
 		return Math.floor(Math.random() * Game.players.length);
 	},
 
+	find_current_word_direction: function() {
+		if( Game.current_playing_player.current_word_cells_id.length == 2 ) {
+			var prev_coords = Game.conv_1d_to_2d(Game.current_playing_player.current_word_cells_id[0]);
+			var curr_coords = Game.conv_1d_to_2d(Game.current_playing_player.current_word_cells_id[1]);
+
+			console.log(prev_coords, curr_coords);
+
+			if( prev_coords[0] == curr_coords[0] ) {
+				Game.current_playing_player.current_word_direction = "vertical";
+			} else if( prev_coords[1] == curr_coords[1] ) {
+				Game.current_playing_player.current_word_direction = "horizontal";
+			} else {
+				console.error('Wat? Where the fuck did you place that letter ??');
+			}
+		}
+	},
+
+	find_allowed_cells: function() {
+		var last_placed_cell_id = Game.current_playing_player.current_word_cells_id[Game.current_playing_player.current_word_cells_id.length - 1];
+		var col_cells = Game.get_column_cells_id_from_one_cell_id(last_placed_cell_id);
+		var row_cells = Game.get_row_cells_id_from_one_cell_id(last_placed_cell_id);
+		var allowed_cells;
+
+		if( Game.current_playing_player.current_word_direction == null ) {
+			allowed_cells = col_cells.concat(row_cells);
+		} else if( Game.current_playing_player.current_word_direction == "horizontal") {
+			allowed_cells = row_cells;
+		} else if( Game.current_playing_player.current_word_direction == "vertical" ) {
+			allowed_cells = col_cells;
+		} else {
+			console.error('Wat? current_playing_player.current_word_direction is neither null, "horizontal" nor "vertical". That makes no sense. Contact the developer to insult him.');
+			return;
+		}
+
+		// Remove non-empty cells from allowed_cells
+		for(var i = 0; i < Game.current_playing_player.current_word_cells_id.length; i++) {
+			var cell_id_to_remove = Game.current_playing_player.current_word_cells_id[i];
+			var highlights_array_index;
+
+			while(highlights_array_index !== -1) {
+				highlights_array_index = allowed_cells.indexOf(cell_id_to_remove);
+
+				if( highlights_array_index !== -1 ) {
+					allowed_cells.splice(highlights_array_index, 1);
+				}
+			}
+		}
+
+		Game.current_playing_player.current_allowed_cells = allowed_cells;
+	},
+
 	set_playing_player: function(player_id) {
 		// Reset turn variables of player ending his turn
 		if( Game.current_playing_player ) {
@@ -401,7 +423,6 @@ var Game = {
 			Game.current_playing_player.current_allowed_cells = null;
 			Game.current_playing_player.current_word = "";
 			Game.current_playing_player.current_word_cells_id = [];
-			Game.current_playing_player.previously_placed_letter_cell_id = null;
 
 			Game.deemphasize_highlighted_cells();
 		}
