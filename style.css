@@ -82,8 +82,13 @@ html, body {
 	position: relative;
 }
 
+#board .inner-wrapper .cell.highlight,
 #board .inner-wrapper .cell.droppable-over {
 	background: #e0dbc5;
+}
+
+#board .inner-wrapper .cell.droppable-over.highlight {
+	background: #ede9d6;
 }
 
 #board .inner-wrapper .cell .letter-tile {
