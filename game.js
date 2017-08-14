@@ -16,6 +16,7 @@ var Game = {
 	players: [],
 	current_playing_player: null,
 
+	last_hovered_cell_node: null,
 
 
 
@@ -184,6 +185,8 @@ var Game = {
 
 			onstart: function(event) {
 				droppable_target = null;
+				Game.last_hovered_cell_node = null;
+
 				dragged_letter_index_in_player_pool = [].indexOf.call(event.target.parentNode.children, event.target);
 			},
 
@@ -205,37 +208,45 @@ var Game = {
 				var draggableTarget = event.target;
 				draggableTarget.setAttribute('data-dragging', 0);
 
-				// If user dropped letter on valid node (A cell from the board)
-				// @TODO: Check the cell is allowed
+				// If user dropped letter on valid node (A free and allowed cell from the board)
 				if( droppable_target ) {
-					var selected_letter = draggableTarget.getAttribute('data-letter');
-					var selected_cell_id = parseInt(droppable_target.getAttribute('data-index'));
 
-					// Append letter node to cell 
-					droppable_target.appendChild(draggableTarget);
 					droppable_target.classList.remove('droppable-over');
-					droppable_target.setAttribute('data-letter', selected_letter);
 
-					// Remove previous highlights
-					Game.deemphasize_highlighted_cells();
-					
-					// Setup player data
-					Game.current_playing_player.current_word += selected_letter;
-					Game.current_playing_player.current_word_cells_id.push(selected_cell_id);
+					if( ! draggableTarget.classList.contains('invalid-move') ) {
+						var selected_letter = draggableTarget.getAttribute('data-letter');
+						var selected_cell_id = parseInt(droppable_target.getAttribute('data-index'));
 
-					// Update player's letters pool (removes the dropped letter)
-					Game.current_playing_player.letters_pool.splice(dragged_letter_index_in_player_pool, 1);
+						// Append letter node to cell 
+						droppable_target.appendChild(draggableTarget);
+						droppable_target.classList.remove('droppable-over');
+						droppable_target.setAttribute('data-letter', selected_letter);
 
-					// When a second letter has been placed, find the direction (horizontal or vertical)
-					// of the currently played word.
-					Game.find_current_word_direction();
+						// Remove previous highlights
+						Game.deemphasize_highlighted_cells();
+						
+						// Setup player data
+						Game.current_playing_player.current_word += selected_letter;
+						Game.current_playing_player.current_word_cells_id.push(selected_cell_id);
 
-					// Find allowed cells after player's move
-					Game.find_allowed_cells();
+						// Update player's letters pool (removes the dropped letter)
+						Game.current_playing_player.letters_pool.splice(dragged_letter_index_in_player_pool, 1);
 
-					// Highlight valid cells for letter placement
-					Game.highlight_cells(Game.current_playing_player.current_allowed_cells);
+						// When a second letter has been placed, find the direction (horizontal or vertical)
+						// of the currently played word.
+						Game.find_current_word_direction();
+
+						// Find allowed cells after player's move
+						Game.find_allowed_cells();
+
+						// Highlight valid cells for letter placement
+						Game.highlight_cells(Game.current_playing_player.current_allowed_cells);
+					}
+
+					droppable_target.classList.remove('invalid-move');
 				}
+
+				draggableTarget.classList.remove('invalid-move');
 
 				draggableTarget.setAttribute('data-x', 0);
 		    	draggableTarget.setAttribute('data-y', 0);
@@ -256,7 +267,18 @@ var Game = {
 				    dropzoneElement = event.target;
 
 				dropzoneElement.classList.add('droppable-over');
-				//draggableElement.classList.add('can-drop');
+				Game.last_hovered_cell_node = dropzoneElement;
+
+				draggableElement.classList.remove('invalid-move');
+
+				// Check move is valid
+				if( Game.current_playing_player.current_allowed_cells && Game.current_playing_player.current_allowed_cells.length ) {
+					var hovered_cell_id = parseInt(dropzoneElement.getAttribute('data-index'));
+					if( Game.current_playing_player.current_allowed_cells.indexOf(hovered_cell_id) === -1 ) {
+						draggableElement.classList.add('invalid-move');
+						dropzoneElement.classList.add('invalid-move');
+					} 
+				}
 			},
 
 			ondragleave: function (event) {
@@ -264,16 +286,14 @@ var Game = {
 				    dropzoneElement = event.target;
 
 				dropzoneElement.classList.remove('droppable-over');
-				//draggableElement.classList.remove('can-drop');
+				Game.last_hovered_cell_node.classList.remove('invalid-move');
 			},
 
 			ondrop: function (event) {
 				var draggableElement = event.relatedTarget,
 				    dropzoneElement = event.target;
-				
-				// @TODO: Check the cell is free before setting dragndrop_success to true
-				droppable_target = dropzoneElement;
 
+				droppable_target = dropzoneElement;
 				/* The actual tile placement takes place in draggable.onend callback */
 			}
 		})
@@ -311,29 +331,6 @@ var Game = {
 	/*******************
 	* UX METHODS *
 	********************/
-	get_row_cells_id_from_one_cell_id: function(cell_id) {
-		var row_cells = [];
-
-		var cell_2d = Game.conv_1d_to_2d(cell_id);
-
-		for(var x = 0; x < GAME_NUM_CELLS_PER_SIDE; x++) {
-			row_cells.push( Game.conv_2d_to_1d(x, cell_2d[1]) );
-		}
-
-		return row_cells;
-	},
-
-	get_column_cells_id_from_one_cell_id: function(cell_id) {
-		var column_cells = [];
-
-		var cell_2d = Game.conv_1d_to_2d(cell_id);
-
-		for(var y = 0; y < GAME_NUM_CELLS_PER_SIDE; y++) {
-			column_cells.push( Game.conv_2d_to_1d(cell_2d[0], y) );
-		}
-
-		return column_cells;
-	},
 
 	// Accepted arguments:
 	// - An array of cell_id 1d coordinates
@@ -370,8 +367,6 @@ var Game = {
 			var prev_coords = Game.conv_1d_to_2d(Game.current_playing_player.current_word_cells_id[0]);
 			var curr_coords = Game.conv_1d_to_2d(Game.current_playing_player.current_word_cells_id[1]);
 
-			console.log(prev_coords, curr_coords);
-
 			if( prev_coords[0] == curr_coords[0] ) {
 				Game.current_playing_player.current_word_direction = "vertical";
 			} else if( prev_coords[1] == curr_coords[1] ) {
@@ -383,35 +378,43 @@ var Game = {
 	},
 
 	find_allowed_cells: function() {
-		var last_placed_cell_id = Game.current_playing_player.current_word_cells_id[Game.current_playing_player.current_word_cells_id.length - 1];
-		var col_cells = Game.get_column_cells_id_from_one_cell_id(last_placed_cell_id);
-		var row_cells = Game.get_row_cells_id_from_one_cell_id(last_placed_cell_id);
+
+		if( ! Game.current_playing_player.current_word_cells_id.length ) {
+			Game.current_playing_player.current_allowed_cells = null;
+			return;
+		}
+
+		var minX = 9999, minY = 9999, maxX = -1, maxY = -1;
+
+		for(var i = 0; i < Game.current_playing_player.current_word_cells_id.length; i++) {
+			var this_cell_id = Game.current_playing_player.current_word_cells_id[i];
+			var coords2d = Game.conv_1d_to_2d(this_cell_id);
+
+			if( coords2d[0] < minX ) { minX = coords2d[0]; }
+			if( coords2d[0] > maxX ) { maxX = coords2d[0]; }
+			if( coords2d[1] < minY ) { minY = coords2d[1]; }
+			if( coords2d[1] > maxY ) { maxY = coords2d[1]; }
+		}
+
+		var left1d = minX > 0 ? Game.conv_2d_to_1d(minX - 1, minY) : null;
+		var right1d = maxX < GAME_NUM_CELLS_PER_SIDE - 1 ? Game.conv_2d_to_1d(maxX + 1, maxY) : null;
+		var bottom1d = minY > 0 ? Game.conv_2d_to_1d(minX, minY - 1) : null;
+		var top1d = maxY < GAME_NUM_CELLS_PER_SIDE - 1 ? Game.conv_2d_to_1d(maxX, maxY + 1) : null;
+
 		var allowed_cells;
 
 		if( Game.current_playing_player.current_word_direction == null ) {
-			allowed_cells = col_cells.concat(row_cells);
+			allowed_cells = [ left1d, right1d, bottom1d, top1d ];
 		} else if( Game.current_playing_player.current_word_direction == "horizontal") {
-			allowed_cells = row_cells;
+			allowed_cells = [ left1d, right1d ];
 		} else if( Game.current_playing_player.current_word_direction == "vertical" ) {
-			allowed_cells = col_cells;
+			allowed_cells = [ bottom1d, top1d ];
 		} else {
 			console.error('Wat? current_playing_player.current_word_direction is neither null, "horizontal" nor "vertical". That makes no sense. Contact the developer to insult him.');
 			return;
 		}
 
-		// Remove non-empty cells from allowed_cells
-		for(var i = 0; i < Game.current_playing_player.current_word_cells_id.length; i++) {
-			var cell_id_to_remove = Game.current_playing_player.current_word_cells_id[i];
-			var highlights_array_index;
-
-			while(highlights_array_index !== -1) {
-				highlights_array_index = allowed_cells.indexOf(cell_id_to_remove);
-
-				if( highlights_array_index !== -1 ) {
-					allowed_cells.splice(highlights_array_index, 1);
-				}
-			}
-		}
+		allowed_cells = allowed_cells.filter( function(cell_id) { return cell_id !== null; });
 
 		Game.current_playing_player.current_allowed_cells = allowed_cells;
 	},
