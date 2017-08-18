@@ -59,14 +59,15 @@ var Game = {
 			Game.players[i].id = i;
 			Game.players[i].current_score = 0;
 			Game.players[i].current_word_direction = null;
-			Game.players[i].current_word = "";
+			Game.players[i].current_played_word = "";
 			Game.players[i].current_word_cells_id = [];
+			Game.players[i].current_cell_id_to_letter = {};
 			Game.players[i].current_allowed_cells = null;
 			Game.players[i].letters_pool = [];
 			Game.players[i].next_player_id = ( (i + 1) < Game.players.length ? (i + 1) : 0 );
 
 			players_list_dl_html += 
-				'<dt id="info-players-name-'+i+'" class="info-player-name">'+Game.players[i].name+' <small>('+Game.players[i].type+')</small></dt>'+
+				'<dt id="info-players-name-'+i+'" class="info-player-name">'+Game.players[i].name+'</dt>'+
 				'<dd id="info-players-score-'+i+'" class="info-player-score">'+Game.players[i].current_score+' points</dd>';
 		}
 
@@ -225,9 +226,16 @@ var Game = {
 						// Remove previous highlights
 						Game.deemphasize_highlighted_cells();
 						
-						// Setup player data
-						Game.current_playing_player.current_word += selected_letter;
+						// Find and setup currently played word
 						Game.current_playing_player.current_word_cells_id.push(selected_cell_id);
+						Game.current_playing_player.current_cell_id_to_letter[selected_cell_id] = selected_letter;
+						Game.current_playing_player.current_played_word = "";
+
+						var sorted_cells = Object.keys(Game.current_playing_player.current_cell_id_to_letter).sort();
+						for(var i = 0; i < sorted_cells.length; i++) {
+							var letter_cell_index = parseInt(sorted_cells[i]);
+							Game.current_playing_player.current_played_word += Game.current_playing_player.current_cell_id_to_letter[letter_cell_index];
+						}
 
 						// Update player's letters pool (removes the dropped letter)
 						Game.current_playing_player.letters_pool.splice(dragged_letter_index_in_player_pool, 1);
@@ -424,8 +432,9 @@ var Game = {
 		if( Game.current_playing_player ) {
 			Game.current_playing_player.current_word_direction = null;
 			Game.current_playing_player.current_allowed_cells = null;
-			Game.current_playing_player.current_word = "";
+			Game.current_playing_player.current_played_word = "";
 			Game.current_playing_player.current_word_cells_id = [];
+			Game.current_playing_player.current_cell_id_to_letter = {};
 
 			Game.deemphasize_highlighted_cells();
 		}
