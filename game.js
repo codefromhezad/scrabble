@@ -7,7 +7,7 @@ var Game = {
 	},
 
 	distribution_data: {},
-	current_cells_value: [],
+	current_cells_value: {},
 	game_letters_pool: {},
 
 	root_node: null,
@@ -167,6 +167,13 @@ var Game = {
 
 			// @TODO
 			// Check player entry validity, calculate player score
+
+			// Add Player's letters to current_cells_value 
+			for(var cell_id in Game.current_playing_player.current_cell_id_to_letter) {
+				Game.current_cells_value[cell_id] = Game.current_playing_player.current_cell_id_to_letter[cell_id];
+			}
+
+			// Set turn to next player
 			Game.set_playing_player(Game.current_playing_player.next_player_id);
 
 		}, false);
@@ -226,7 +233,7 @@ var Game = {
 						// Remove previous highlights
 						Game.deemphasize_highlighted_cells();
 						
-						// Find and setup currently played word
+						// Find currently played word, handling letters placed before and/or after first placed letter
 						Game.current_playing_player.current_word_cells_id.push(selected_cell_id);
 						Game.current_playing_player.current_cell_id_to_letter[selected_cell_id] = selected_letter;
 						Game.current_playing_player.current_played_word = "";
@@ -279,9 +286,13 @@ var Game = {
 
 				draggableElement.classList.remove('invalid-move');
 
-				// Check move is valid
+				var hovered_cell_id = parseInt(dropzoneElement.getAttribute('data-index'));
+
+				// Check cell is empty
+				// HERETODO
+
+				// Check move is on an allowed cell of currently played word  
 				if( Game.current_playing_player.current_allowed_cells && Game.current_playing_player.current_allowed_cells.length ) {
-					var hovered_cell_id = parseInt(dropzoneElement.getAttribute('data-index'));
 					if( Game.current_playing_player.current_allowed_cells.indexOf(hovered_cell_id) === -1 ) {
 						draggableElement.classList.add('invalid-move');
 						dropzoneElement.classList.add('invalid-move');
