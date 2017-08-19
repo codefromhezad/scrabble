@@ -289,10 +289,13 @@ var Game = {
 				var hovered_cell_id = parseInt(dropzoneElement.getAttribute('data-index'));
 
 				// Check cell is empty
-				// HERETODO
+				if( Game.current_cells_value[hovered_cell_id] ) {
+					draggableElement.classList.add('invalid-move');
+					dropzoneElement.classList.add('invalid-move');
+				}
 
 				// Check move is on an allowed cell of currently played word  
-				if( Game.current_playing_player.current_allowed_cells && Game.current_playing_player.current_allowed_cells.length ) {
+				else if( Game.current_playing_player.current_allowed_cells && Game.current_playing_player.current_allowed_cells.length ) {
 					if( Game.current_playing_player.current_allowed_cells.indexOf(hovered_cell_id) === -1 ) {
 						draggableElement.classList.add('invalid-move');
 						dropzoneElement.classList.add('invalid-move');
