@@ -15,6 +15,7 @@ var Game = {
 
 	players: [],
 	current_playing_player: null,
+	current_turn: 0,
 
 	last_hovered_cell_node: null,
 
@@ -229,11 +230,14 @@ var Game = {
 						Game.current_playing_player.current_cell_id_to_letter[selected_cell_id] = selected_letter;
 						Game.current_playing_player.current_played_word = "";
 
-						var sorted_cells = Object.keys(Game.current_playing_player.current_cell_id_to_letter).sort();
+						var sorted_cells = Object.keys(Game.current_playing_player.current_cell_id_to_letter).sort(function(a, b) { return a - b; });
 						for(var i = 0; i < sorted_cells.length; i++) {
 							var letter_cell_index = parseInt(sorted_cells[i]);
 							Game.current_playing_player.current_played_word += Game.current_playing_player.current_cell_id_to_letter[letter_cell_index];
 						}
+
+						// Add Player's letters to current_cells_value 
+						Game.current_cells_value[selected_cell_id] = selected_letter;
 
 						// Update player's letters pool (removes the dropped letter)
 						Game.current_playing_player.letters_pool.splice(dragged_letter_index_in_player_pool, 1);
@@ -340,6 +344,29 @@ var Game = {
 		return x + y * GAME_NUM_CELLS_PER_SIDE;
 	},
 
+	find_adjacent_cells: function(cell_id) {
+		var coords2d = Game.conv_1d_to_2d(cell_id);
+		var adjacent_ids = [];
+
+		if(coords2d[0] > 0) { // left
+			adjacent_ids.push( Game.conv_2d_to_1d(coords2d[0] - 1, coords2d[1]) ); 
+		}
+
+		if(coords2d[0] < GAME_NUM_CELLS_PER_SIDE - 1) { // right
+			adjacent_ids.push( Game.conv_2d_to_1d(coords2d[0] + 1, coords2d[1]) );
+		}
+
+		if(coords2d[1] > 0) { // top
+			adjacent_ids.push( Game.conv_2d_to_1d(coords2d[0], coords2d[1] - 1) );
+		}
+
+		if(coords2d[1] < GAME_NUM_CELLS_PER_SIDE - 1) { // bottom
+			adjacent_ids.push( Game.conv_2d_to_1d(coords2d[0], coords2d[1] + 1) );
+		}
+
+		return adjacent_ids;
+	},
+
 
 	/*******************
 	* UX METHODS *
@@ -385,6 +412,8 @@ var Game = {
 		// @TODO: Check player entry validity
 
 		if( turn_is_valid ) {
+
+			// Calculate score
 			for(var cell_id in Game.current_playing_player.current_cell_id_to_letter) {
 
 				var cell_letter = Game.current_playing_player.current_cell_id_to_letter[cell_id];
@@ -393,10 +422,10 @@ var Game = {
 				// Calculate player's score
 				// @TODO: Implement score-modifiers (word x2 and x3, letter x2 and x3)
 				Game.current_playing_player.current_score += base_letter_score;
-
-				// Add Player's letters to current_cells_value 
-				Game.current_cells_value[cell_id] = cell_letter;
 			}
+
+			// Increment turn variable
+			Game.current_turn += 1;
 
 			// Update player's score indicator
 			Game.update_current_player_score_indicator();
@@ -421,41 +450,96 @@ var Game = {
 		}
 	},
 
+	find_word_boundaries: function(direction, first_id, last_id) {
+		if(direction == "horizontal") {
+			var coords_axis_index = 0;
+		} else if( direction == "vertical" ) {
+			var coords_axis_index = 1;
+		} else {
+			console.error('find_word_boundaries\'s first argument must be either "horizontal" or "vertical".');
+			return;
+		}
+		
+		if( first_id ) {
+			while( Game.current_cells_value[first_id] ) {
+				var cell_coords = Game.conv_1d_to_2d(first_id);
+				cell_coords[coords_axis_index] -= 1;
+
+				if( cell_coords[coords_axis_index] < 0 ) {
+					first_id = null;
+					break;
+				}
+
+				first_id = Game.conv_2d_to_1d(cell_coords);
+			}
+		}
+
+		if( last_id ) {
+			while( Game.current_cells_value[last_id] ) {
+				var cell_coords = Game.conv_1d_to_2d(last_id);
+				cell_coords[coords_axis_index] += 1;
+
+				if( cell_coords[coords_axis_index] > GAME_NUM_CELLS_PER_SIDE - 1 ) {
+					last_id = null;
+					break;
+				}
+
+				last_id = Game.conv_2d_to_1d(cell_coords);
+			}
+		}
+
+		return [first_id, last_id];
+	},
+
 	find_allowed_cells: function() {
 
+		var allowed_cells = [];
+
 		if( ! Game.current_playing_player.current_word_cells_id.length ) {
-			Game.current_playing_player.current_allowed_cells = null;
-			return;
-		}
+			// Player didn't add any letter yet
+			for(var cell_id in Game.current_cells_value) {
+				var adjacent_ids = Game.find_adjacent_cells(cell_id);
 
-		var minX = 9999, minY = 9999, maxX = -1, maxY = -1;
+				for(var i = 0; i < adjacent_ids.length; i++) {
+					var adj_cell_id = adjacent_ids[i];
+					if( adj_cell_id && (! Game.current_cells_value[adj_cell_id]) && allowed_cells.indexOf(adj_cell_id) == -1 ) {
+						allowed_cells.push(adj_cell_id);
+					}
+				}
+			}
 
-		for(var i = 0; i < Game.current_playing_player.current_word_cells_id.length; i++) {
-			var this_cell_id = Game.current_playing_player.current_word_cells_id[i];
-			var coords2d = Game.conv_1d_to_2d(this_cell_id);
-
-			if( coords2d[0] < minX ) { minX = coords2d[0]; }
-			if( coords2d[0] > maxX ) { maxX = coords2d[0]; }
-			if( coords2d[1] < minY ) { minY = coords2d[1]; }
-			if( coords2d[1] > maxY ) { maxY = coords2d[1]; }
-		}
-
-		var left1d = minX > 0 ? Game.conv_2d_to_1d(minX - 1, minY) : null;
-		var right1d = maxX < GAME_NUM_CELLS_PER_SIDE - 1 ? Game.conv_2d_to_1d(maxX + 1, maxY) : null;
-		var bottom1d = minY > 0 ? Game.conv_2d_to_1d(minX, minY - 1) : null;
-		var top1d = maxY < GAME_NUM_CELLS_PER_SIDE - 1 ? Game.conv_2d_to_1d(maxX, maxY + 1) : null;
-
-		var allowed_cells;
-
-		if( Game.current_playing_player.current_word_direction == null ) {
-			allowed_cells = [ left1d, right1d, bottom1d, top1d ];
-		} else if( Game.current_playing_player.current_word_direction == "horizontal") {
-			allowed_cells = [ left1d, right1d ];
-		} else if( Game.current_playing_player.current_word_direction == "vertical" ) {
-			allowed_cells = [ bottom1d, top1d ];
 		} else {
-			console.error('Wat? current_playing_player.current_word_direction is neither null, "horizontal" nor "vertical". That makes no sense. Contact the developer to insult him.');
-			return;
+			// Player's added at least a letter 
+			var minX = 9999, minY = 9999, maxX = -1, maxY = -1;
+
+			for(var i = 0; i < Game.current_playing_player.current_word_cells_id.length; i++) {
+				var this_cell_id = Game.current_playing_player.current_word_cells_id[i];
+				var coords2d = Game.conv_1d_to_2d(this_cell_id);
+
+				if( coords2d[0] < minX ) { minX = coords2d[0]; }
+				if( coords2d[0] > maxX ) { maxX = coords2d[0]; }
+				if( coords2d[1] < minY ) { minY = coords2d[1]; }
+				if( coords2d[1] > maxY ) { maxY = coords2d[1]; }
+			}
+
+			var left1d = minX > 0 ? Game.conv_2d_to_1d(minX - 1, minY) : null;
+			var right1d = maxX < GAME_NUM_CELLS_PER_SIDE - 1 ? Game.conv_2d_to_1d(maxX + 1, maxY) : null;
+			var bottom1d = minY > 0 ? Game.conv_2d_to_1d(minX, minY - 1) : null;
+			var top1d = maxY < GAME_NUM_CELLS_PER_SIDE - 1 ? Game.conv_2d_to_1d(maxX, maxY + 1) : null;
+
+			var horizontal_bounds = Game.find_word_boundaries('horizontal', left1d, right1d);
+			var vertical_bounds = Game.find_word_boundaries('vertical', bottom1d, top1d);
+
+			if( Game.current_playing_player.current_word_direction == null ) {
+				allowed_cells = horizontal_bounds.concat(vertical_bounds);
+			} else if( Game.current_playing_player.current_word_direction == "horizontal") {
+				allowed_cells = horizontal_bounds;
+			} else if( Game.current_playing_player.current_word_direction == "vertical" ) {
+				allowed_cells = vertical_bounds;
+			} else {
+				console.error('Wat? current_playing_player.current_word_direction is neither null, "horizontal" nor "vertical". That makes no sense. Contact the developer to insult him.');
+				return;
+			}
 		}
 
 		allowed_cells = allowed_cells.filter( function(cell_id) { return cell_id !== null; });
@@ -503,6 +587,12 @@ var Game = {
 			document.getElementById('info-action-next-turn-button').classList.remove('disabled');
 		} else {
 			document.getElementById('info-action-next-turn-button').classList.add('disabled');
+		}
+
+		/* Show allowed cells */
+		if( Object.keys(Game.current_cells_value).length ) {
+			Game.find_allowed_cells();
+			Game.highlight_cells(Game.current_playing_player.current_allowed_cells);
 		}
 	},
 
