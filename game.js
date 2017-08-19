@@ -457,6 +457,7 @@ var Game = {
 
 				// Calculate player's score
 				// @TODO: Implement score-modifiers (word x2 and x3, letter x2 and x3)
+				// @TODO: Take into account previous letters
 				turn_score += base_letter_score;
 			}
 			Game.current_playing_player.current_score += turn_score;
@@ -499,45 +500,70 @@ var Game = {
 		}
 	},
 
-	find_word_boundaries: function(direction, first_id, last_id) {
-		if(direction == "horizontal") {
-			var coords_axis_index = 0;
-		} else if( direction == "vertical" ) {
-			var coords_axis_index = 1;
-		} else {
-			console.error('find_word_boundaries\'s first argument must be either "horizontal" or "vertical".');
-			return;
+	find_current_word_boundaries: function() {
+		var minX = 9999, minY = 9999, maxX = -1, maxY = -1;
+
+		for(var i = 0; i < Game.current_playing_player.current_word_cells_id.length; i++) {
+			var this_cell_id = Game.current_playing_player.current_word_cells_id[i];
+			var coords2d = Game.conv_1d_to_2d(this_cell_id);
+
+			if( coords2d[0] < minX ) { minX = coords2d[0]; }
+			if( coords2d[0] > maxX ) { maxX = coords2d[0]; }
+			if( coords2d[1] < minY ) { minY = coords2d[1]; }
+			if( coords2d[1] > maxY ) { maxY = coords2d[1]; }
+		}
+
+		var left1d = minX > 0 ? Game.conv_2d_to_1d(minX - 1, minY) : null;
+		var right1d = maxX < GAME_NUM_CELLS_PER_SIDE - 1 ? Game.conv_2d_to_1d(maxX + 1, maxY) : null;
+		var bottom1d = minY > 0 ? Game.conv_2d_to_1d(minX, minY - 1) : null;
+		var top1d = maxY < GAME_NUM_CELLS_PER_SIDE - 1 ? Game.conv_2d_to_1d(maxX, maxY + 1) : null;
+
+		var result_array = [];
+
+		for(var coords_axis_index = 0; coords_axis_index < 2; coords_axis_index++) {
+			if( coords_axis_index == 0 ) {
+				var first_id = left1d;
+				var last_id = right1d;
+			} else {
+				var first_id = bottom1d;
+				var last_id = top1d;
+			}
+
+			if( first_id ) {
+				while( Game.current_cells_value[first_id] ) {
+					var cell_coords = Game.conv_1d_to_2d(first_id);
+					cell_coords[coords_axis_index] -= 1;
+
+					if( cell_coords[coords_axis_index] < 0 ) {
+						first_id = null;
+						break;
+					}
+
+					first_id = Game.conv_2d_to_1d(cell_coords);
+				}
+			}
+
+			if( last_id ) {
+				while( Game.current_cells_value[last_id] ) {
+					var cell_coords = Game.conv_1d_to_2d(last_id);
+					cell_coords[coords_axis_index] += 1;
+
+					if( cell_coords[coords_axis_index] > GAME_NUM_CELLS_PER_SIDE - 1 ) {
+						last_id = null;
+						break;
+					}
+
+					last_id = Game.conv_2d_to_1d(cell_coords);
+				}
+			}
+
+			result_array[coords_axis_index] = [first_id, last_id];
 		}
 		
-		if( first_id ) {
-			while( Game.current_cells_value[first_id] ) {
-				var cell_coords = Game.conv_1d_to_2d(first_id);
-				cell_coords[coords_axis_index] -= 1;
-
-				if( cell_coords[coords_axis_index] < 0 ) {
-					first_id = null;
-					break;
-				}
-
-				first_id = Game.conv_2d_to_1d(cell_coords);
-			}
-		}
-
-		if( last_id ) {
-			while( Game.current_cells_value[last_id] ) {
-				var cell_coords = Game.conv_1d_to_2d(last_id);
-				cell_coords[coords_axis_index] += 1;
-
-				if( cell_coords[coords_axis_index] > GAME_NUM_CELLS_PER_SIDE - 1 ) {
-					last_id = null;
-					break;
-				}
-
-				last_id = Game.conv_2d_to_1d(cell_coords);
-			}
-		}
-
-		return [first_id, last_id];
+		return {
+			horizontal: result_array[0],
+			vertical: result_array[1]
+		};
 	},
 
 	find_allowed_cells: function() {
@@ -545,6 +571,7 @@ var Game = {
 		var allowed_cells = [];
 
 		if( ! Game.current_playing_player.current_word_cells_id.length ) {
+
 			// Player didn't add any letter yet
 			for(var cell_id in Game.current_cells_value) {
 				var adjacent_ids = Game.find_adjacent_cells(cell_id);
@@ -558,33 +585,16 @@ var Game = {
 			}
 
 		} else {
+
 			// Player's added at least a letter 
-			var minX = 9999, minY = 9999, maxX = -1, maxY = -1;
-
-			for(var i = 0; i < Game.current_playing_player.current_word_cells_id.length; i++) {
-				var this_cell_id = Game.current_playing_player.current_word_cells_id[i];
-				var coords2d = Game.conv_1d_to_2d(this_cell_id);
-
-				if( coords2d[0] < minX ) { minX = coords2d[0]; }
-				if( coords2d[0] > maxX ) { maxX = coords2d[0]; }
-				if( coords2d[1] < minY ) { minY = coords2d[1]; }
-				if( coords2d[1] > maxY ) { maxY = coords2d[1]; }
-			}
-
-			var left1d = minX > 0 ? Game.conv_2d_to_1d(minX - 1, minY) : null;
-			var right1d = maxX < GAME_NUM_CELLS_PER_SIDE - 1 ? Game.conv_2d_to_1d(maxX + 1, maxY) : null;
-			var bottom1d = minY > 0 ? Game.conv_2d_to_1d(minX, minY - 1) : null;
-			var top1d = maxY < GAME_NUM_CELLS_PER_SIDE - 1 ? Game.conv_2d_to_1d(maxX, maxY + 1) : null;
-
-			var horizontal_bounds = Game.find_word_boundaries('horizontal', left1d, right1d);
-			var vertical_bounds = Game.find_word_boundaries('vertical', bottom1d, top1d);
+			var bounds = Game.find_current_word_boundaries();
 
 			if( Game.current_playing_player.current_word_direction == null ) {
-				allowed_cells = horizontal_bounds.concat(vertical_bounds);
+				allowed_cells = bounds.horizontal.concat(bounds.vertical);
 			} else if( Game.current_playing_player.current_word_direction == "horizontal") {
-				allowed_cells = horizontal_bounds;
+				allowed_cells = bounds.horizontal;
 			} else if( Game.current_playing_player.current_word_direction == "vertical" ) {
-				allowed_cells = vertical_bounds;
+				allowed_cells = bounds.vertical;
 			} else {
 				console.error('Wat? current_playing_player.current_word_direction is neither null, "horizontal" nor "vertical". That makes no sense. Contact the developer to insult him.');
 				return;
