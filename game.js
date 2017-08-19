@@ -62,7 +62,6 @@ var Game = {
 			Game.players[i].current_word_direction = null;
 			Game.players[i].current_played_word = "";
 			Game.players[i].current_word_cells_id = [];
-			Game.players[i].current_cell_id_to_letter = {};
 			Game.players[i].current_allowed_cells = null;
 			Game.players[i].letters_pool = [];
 			Game.players[i].next_player_id = ( (i + 1) < Game.players.length ? (i + 1) : 0 );
@@ -241,14 +240,7 @@ var Game = {
 						
 						// Find currently played word, handling letters placed before and/or after first placed letter
 						Game.current_playing_player.current_word_cells_id.push(selected_cell_id);
-						Game.current_playing_player.current_cell_id_to_letter[selected_cell_id] = selected_letter;
-						Game.current_playing_player.current_played_word = "";
-
-						var sorted_cells = Object.keys(Game.current_playing_player.current_cell_id_to_letter).sort(function(a, b) { return a - b; });
-						for(var i = 0; i < sorted_cells.length; i++) {
-							var letter_cell_index = parseInt(sorted_cells[i]);
-							Game.current_playing_player.current_played_word += Game.current_playing_player.current_cell_id_to_letter[letter_cell_index];
-						}
+						
 
 						// Add Player's letters to current_cells_value 
 						Game.current_cells_value[selected_cell_id] = selected_letter;
@@ -443,21 +435,46 @@ var Game = {
 
 	end_current_turn: function() {
 		var turn_is_valid = true;
+		var turn_letters_bounds = Game.find_current_word_boundaries();
+		var current_word_full_cells_ids = [];
+		Game.current_playing_player.current_played_word = "";
+
+		if( Game.current_playing_player.current_word_direction == null ) {
+
+			// @TODO: Find current word when turn ends with only one letter added (no word direction set)
+
+		} else {
+			var word_bounds = turn_letters_bounds[Game.current_playing_player.current_word_direction];
+
+			if( Game.current_playing_player.current_word_direction == "horizontal" ) {
+				var walker_adder = 1;
+			} else {
+				var walker_adder = GAME_NUM_CELLS_PER_SIDE;
+			}
+
+			var walker_cell_index = word_bounds[0] !== null ? word_bounds[0] + walker_adder : 0;
+			while(walker_cell_index < word_bounds[1]) {
+				current_word_full_cells_ids.push(walker_cell_index);
+				Game.current_playing_player.current_played_word += Game.current_cells_value[walker_cell_index];
+				walker_cell_index += walker_adder;
+			}
+		}
+
 
 		// @TODO: Check player entry validity
+
 
 		if( turn_is_valid ) {
 
 			// Calculate score
 			var turn_score = 0;
-			for(var cell_id in Game.current_playing_player.current_cell_id_to_letter) {
+			for(var letter_index in Game.current_playing_player.current_played_word) {
 
-				var cell_letter = Game.current_playing_player.current_cell_id_to_letter[cell_id];
+				var cell_letter = Game.current_playing_player.current_played_word[letter_index];
 				var base_letter_score = Game.distribution_data[cell_letter].score_value;
 
 				// Calculate player's score
 				// @TODO: Implement score-modifiers (word x2 and x3, letter x2 and x3)
-				// @TODO: Take into account previous letters
 				turn_score += base_letter_score;
 			}
 			Game.current_playing_player.current_score += turn_score;
@@ -591,13 +608,8 @@ var Game = {
 
 			if( Game.current_playing_player.current_word_direction == null ) {
 				allowed_cells = bounds.horizontal.concat(bounds.vertical);
-			} else if( Game.current_playing_player.current_word_direction == "horizontal") {
-				allowed_cells = bounds.horizontal;
-			} else if( Game.current_playing_player.current_word_direction == "vertical" ) {
-				allowed_cells = bounds.vertical;
 			} else {
-				console.error('Wat? current_playing_player.current_word_direction is neither null, "horizontal" nor "vertical". That makes no sense. Contact the developer to insult him.');
-				return;
+				allowed_cells = bounds[Game.current_playing_player.current_word_direction];
 			}
 		}
 
@@ -613,7 +625,6 @@ var Game = {
 			Game.current_playing_player.current_allowed_cells = null;
 			Game.current_playing_player.current_played_word = "";
 			Game.current_playing_player.current_word_cells_id = [];
-			Game.current_playing_player.current_cell_id_to_letter = {};
 
 			Game.deemphasize_highlighted_cells();
 		}
