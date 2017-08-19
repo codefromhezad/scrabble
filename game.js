@@ -83,13 +83,15 @@ var Game = {
 
 		var info_pane_html = 
 			'<div id="info-block-current-turn" class="info-block">'+
-				'<h3>Joueurs</h3>'+
+				'<div id="info-block-current-player"></div>'+
+			'</div>'+
+			'<div id="info-block-players" class="info-block">'+
+				'<h3 id="info-block-current-turn-value"></h3>'+
 				'<dl id="players-list">'+
 					players_list_dl_html +
 				'</dl>'+
 			'</div>'+
 			'<div id="info-block-player-letters" class="info-block">'+
-				'<h3>Vos lettres</h3>'+
 				'<div class="info-player-letters-holder">'+
 					'<div id="info-player-letters-value"></div>'+
 				'</div>'+
@@ -393,9 +395,20 @@ var Game = {
 		}
 	},
 
-	update_current_player_score_indicator: function() {
-		var score_val = Game.current_playing_player.current_score;
-		document.getElementById('info-players-score-' + Game.current_playing_player.id).innerHTML = score_val + " points";
+	update_info_pane_values: function() {
+
+		// Players score indicator
+		for(var i = 0; i < Game.players.length; i++) {
+			var player = Game.players[i];
+			var score_val = player.current_score;
+			document.getElementById('info-players-score-' + player.id).innerHTML = score_val + " points";
+		}
+
+		// Current turn info
+		document.getElementById('info-block-current-turn-value').innerHTML = "Tour n°" + (Game.current_turn + 1);
+
+		// Current player info
+		document.getElementById('info-block-current-player').innerHTML = Game.current_playing_player.name;
 	},
 
 	/*******************
@@ -426,9 +439,6 @@ var Game = {
 
 			// Increment turn variable
 			Game.current_turn += 1;
-
-			// Update player's score indicator
-			Game.update_current_player_score_indicator();
 			
 			// Set turn to next player
 			Game.set_playing_player(Game.current_playing_player.next_player_id);
@@ -569,12 +579,9 @@ var Game = {
 			document.getElementById('info-block-player-letters').classList.add('disabled');
 		}
 
-		/* Update Players list Ux (show currently playing player) */
-		var player_name_nodes = document.querySelectorAll('.info-player-name');
-		for(var n = 0; n < player_name_nodes.length; n++) {
-			player_name_nodes[n].classList.remove('current');
-		}
-		document.getElementById('info-players-name-'+Game.current_playing_player.id).classList.add('current');
+
+		// Update info pane indicators
+		Game.update_info_pane_values();
 
 
 		/* Pick letters for player */

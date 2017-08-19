@@ -126,25 +126,29 @@ html, body {
 	text-transform: uppercase;
 }
 
-#info-pane .info-block#info-block-current-turn dl {
+#info-pane .info-block#info-block-current-turn {
+	text-align: center;
+}
+
+#info-pane .info-block#info-block-current-turn #info-block-current-player {
+	font-size: 40px;
+	font-weight: 600;
+}
+
+#info-pane .info-block#info-block-players dl {
 	overflow: hidden;
 }
 
-#info-pane .info-block#info-block-current-turn dt {
+#info-pane .info-block#info-block-players dt {
 	float: left;
 	display: block;
 	width: 50%;
 }
 
-#info-pane .info-block#info-block-current-turn dd {
+#info-pane .info-block#info-block-players dd {
 	float: left;
 	display: block;
 	width: 50%;
-}
-
-#info-pane .info-block#info-block-current-turn dt.current,
-#info-pane .info-block#info-block-current-turn dd.current {
-	font-weight: bold;
 }
 
 #info-pane .info-block .info-player-letters-holder {
