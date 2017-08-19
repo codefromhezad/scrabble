@@ -124,6 +124,14 @@ html, body {
 
 #info-pane .info-block h3 {
 	text-transform: uppercase;
+	line-height: 30px;
+}
+
+#info-pane .info-block h3 span {
+	font-size: 14px;
+	font-weight: 400;
+	float: right;
+	text-transform: none;
 }
 
 #info-pane .info-block#info-block-current-turn {

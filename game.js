@@ -405,7 +405,10 @@ var Game = {
 		}
 
 		// Current turn info
-		document.getElementById('info-block-current-turn-value').innerHTML = "Tour n°" + (Game.current_turn + 1);
+		document.getElementById('info-block-current-turn-value').innerHTML = "Tour n°" + (Game.current_turn + 1) + 
+			'<span class="remaining-letters">'+
+				Game.get_remaining_letters_in_pool()+" lettres restantes"+
+			'</span>';
 
 		// Current player info
 		document.getElementById('info-block-current-player').innerHTML = Game.current_playing_player.name;
@@ -417,6 +420,14 @@ var Game = {
 
 	get_random_player_id: function() {
 		return Math.floor(Math.random() * Game.players.length);
+	},
+
+	get_remaining_letters_in_pool: function() {
+		var count = 0;
+		for(var letter in Game.game_letters_pool) {
+			count += Game.game_letters_pool[letter];
+		}
+		return count;
 	},
 
 	end_current_turn: function() {
@@ -580,13 +591,12 @@ var Game = {
 		}
 
 
-		// Update info pane indicators
-		Game.update_info_pane_values();
-
-
 		/* Pick letters for player */
 		Game.pick_letters_for_player(player_id);
 
+
+		// Update info pane indicators
+		Game.update_info_pane_values();
 
 		/* Update letters indicator if playing player is active */
 		if(Game.current_playing_player.active) {
