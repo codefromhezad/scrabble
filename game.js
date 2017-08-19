@@ -165,16 +165,7 @@ var Game = {
 				return false;
 			}
 
-			// @TODO
-			// Check player entry validity, calculate player score
-
-			// Add Player's letters to current_cells_value 
-			for(var cell_id in Game.current_playing_player.current_cell_id_to_letter) {
-				Game.current_cells_value[cell_id] = Game.current_playing_player.current_cell_id_to_letter[cell_id];
-			}
-
-			// Set turn to next player
-			Game.set_playing_player(Game.current_playing_player.next_player_id);
+			Game.end_current_turn();
 
 		}, false);
 	},
@@ -375,6 +366,10 @@ var Game = {
 		}
 	},
 
+	update_current_player_score_indicator: function() {
+		var score_val = Game.current_playing_player.current_score;
+		document.getElementById('info-players-score-' + Game.current_playing_player.id).innerHTML = score_val + " points";
+	},
 
 	/*******************
 	* GAMEPLAY METHODS *
@@ -382,6 +377,33 @@ var Game = {
 
 	get_random_player_id: function() {
 		return Math.floor(Math.random() * Game.players.length);
+	},
+
+	end_current_turn: function() {
+		var turn_is_valid = true;
+
+		// @TODO: Check player entry validity
+
+		if( turn_is_valid ) {
+			for(var cell_id in Game.current_playing_player.current_cell_id_to_letter) {
+
+				var cell_letter = Game.current_playing_player.current_cell_id_to_letter[cell_id];
+				var base_letter_score = Game.distribution_data[cell_letter].score_value;
+
+				// Calculate player's score
+				// @TODO: Implement score-modifiers (word x2 and x3, letter x2 and x3)
+				Game.current_playing_player.current_score += base_letter_score;
+
+				// Add Player's letters to current_cells_value 
+				Game.current_cells_value[cell_id] = cell_letter;
+			}
+
+			// Update player's score indicator
+			Game.update_current_player_score_indicator();
+			
+			// Set turn to next player
+			Game.set_playing_player(Game.current_playing_player.next_player_id);
+		}
 	},
 
 	find_current_word_direction: function() {
