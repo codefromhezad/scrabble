@@ -31,6 +31,8 @@ html, body {
     box-shadow: 0px 6px 0px 0px #b1a078, 0px 7px 2px 1px rgba(0, 0, 0, 0.3), 0px 7px 0px 0px rgba(82, 74, 55, 0.52);
     border-radius: 5px;
     border-top: 1px solid #fbf4e2;
+    margin-bottom: 7px;
+    margin-top: -3px;
 
     -webkit-touch-callout: none;
     -webkit-user-select: none; 
@@ -108,7 +110,7 @@ html, body {
 }
 
 #info-pane {
-	position: absolute;
+	position: fixed;
 	top: 0;
 	right: 0;
 	height: 100%;
@@ -159,10 +161,6 @@ html, body {
 	width: 50%;
 }
 
-#info-pane .info-block .info-player-letters-holder {
-	padding-bottom: 11px;
-}
-
 #info-pane .info-block .info-player-letters-holder #info-player-letters-value {
 	min-height: 56px;
 }
@@ -186,6 +184,8 @@ html, body {
     border-radius: 5px;
     padding: 0 14px;
     border-top: 1px solid #fbf4e2;
+    margin-bottom: 7px;
+    margin-top: -3px;
 
     -webkit-touch-callout: none;
     -webkit-user-select: none; 
@@ -210,4 +210,48 @@ html, body {
 	box-shadow: 0px 6px 0px 0px #797979, 0px 7px 2px 1px rgba(0, 0, 0, 0.3), 0px 7px 0px 0px rgba(78, 78, 78, 0.52) !important;
 	color: #333333 !important;
 	transform: translateY(0) !important;
+}
+
+#info-pane .info-block#info-block-log {
+	padding: 0;
+}
+
+#info-pane .info-block#info-block-log #log-list {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 14px;
+	box-sizing: border-box;
+	table-layout: fixed;
+}
+
+#info-pane .info-block#info-block-log #log-list tr:first-child th {
+  border-top: 0;
+}
+#info-pane .info-block#info-block-log #log-list tr:last-child td {
+  border-bottom: 0;
+}
+#info-pane .info-block#info-block-log #log-list tr td:first-child,
+#info-pane .info-block#info-block-log #log-list tr th:first-child {
+  border-left: 0;
+}
+#info-pane .info-block#info-block-log #log-list tr td:last-child,
+#info-pane .info-block#info-block-log #log-list tr th:last-child {
+  border-right: 0;
+}
+
+#info-pane .info-block#info-block-log #log-list th,
+#info-pane .info-block#info-block-log #log-list td {
+	border: 1px solid #cdc6aa;
+	padding: 2px 6px;
+}
+
+#info-pane .info-block#info-block-log #log-list td div {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+#info-pane .info-block#info-block-log #log-list .log-turn {
+	text-align: center;
+	font-weight: 600;
 }

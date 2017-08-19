@@ -98,6 +98,18 @@ var Game = {
 			'</div>' +
 			'<div id="info-block-actions" class="info-block">' +
 				'<a href="#" id="info-action-next-turn-button" class="disabled">Tour suivant</a>' +
+			'</div>'+
+			'<div id="info-block-log" class="info-block">' +
+				'<table id="log-list">'+
+					'<thead><tr>'+
+						'<th style="width: 25px;">#</th>'+
+						'<th style="width: 100px;">Joueur</th>'+
+						'<th>Mot(s)</th>'+
+						'<th style="width: 40px;">Score</th>'+
+					'</tr></thead>'+
+					'<tbody>'+
+					'</tbody>'+
+				'</table>'+
 			'</div>';
 		info_pane_node.innerHTML = info_pane_html;
 		Game.root_node.appendChild(info_pane_node);
@@ -396,7 +408,6 @@ var Game = {
 	},
 
 	update_info_pane_values: function() {
-
 		// Players score indicator
 		for(var i = 0; i < Game.players.length; i++) {
 			var player = Game.players[i];
@@ -438,6 +449,7 @@ var Game = {
 		if( turn_is_valid ) {
 
 			// Calculate score
+			var turn_score = 0;
 			for(var cell_id in Game.current_playing_player.current_cell_id_to_letter) {
 
 				var cell_letter = Game.current_playing_player.current_cell_id_to_letter[cell_id];
@@ -445,9 +457,25 @@ var Game = {
 
 				// Calculate player's score
 				// @TODO: Implement score-modifiers (word x2 and x3, letter x2 and x3)
-				Game.current_playing_player.current_score += base_letter_score;
+				turn_score += base_letter_score;
 			}
+			Game.current_playing_player.current_score += turn_score;
 
+			// Update info pane log table
+			var log_values = [
+				'<div class="log-turn">' + (Game.current_turn + 1) + '</div>', 
+				'<div class="log-player" title="'+Game.current_playing_player.name+'">' + Game.current_playing_player.name + '</div>', 
+				'<div class="log-words" title="'+Game.current_playing_player.current_played_word+'">' + Game.current_playing_player.current_played_word + '</div>', 
+				'<div class="log-score">' + turn_score + '</div>'
+			];
+			var log_table = document.getElementById('log-list').getElementsByTagName('tbody')[0];
+			var new_row   = log_table.insertRow(log_table.rows.length);
+
+			for(var i = 0; i < log_values.length; i++) {
+				var new_cell  = new_row.insertCell(i);
+				new_cell.innerHTML = log_values[i];
+			}
+			
 			// Increment turn variable
 			Game.current_turn += 1;
 			
