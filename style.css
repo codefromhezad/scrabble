@@ -42,6 +42,11 @@ html, body {
     user-select: none; 
 }
 
+.letter-tile.current-turn-letter-tile {
+	filter: saturate(1.4) brightness(1.1);
+    opacity: 0.9;
+}
+
 .letter-tile.is-blank {
 	color: rgba(0,0,0,0.0);
 }

@@ -235,6 +235,8 @@ var Game = {
 						droppable_target.classList.remove('droppable-over');
 						droppable_target.setAttribute('data-letter', selected_letter);
 
+						draggableTarget.classList.add('current-turn-letter-tile');
+
 						// Remove previous highlights
 						Game.deemphasize_highlighted_cells();
 						
@@ -567,11 +569,13 @@ var Game = {
 
 			Game.current_playing_player.current_score += turn_score;
 
+			var played_words = Game.current_playing_player.current_played_words.replace(/\+/g, ' + ');
+
 			// Update info pane log table
 			var log_values = [
 				'<div class="log-turn">' + (Game.current_turn + 1) + '</div>', 
 				'<div class="log-player" title="'+Game.current_playing_player.name+'">' + Game.current_playing_player.name + '</div>', 
-				'<div class="log-words" title="'+Game.current_playing_player.current_played_words+'">' + Game.current_playing_player.current_played_words + '</div>', 
+				'<div class="log-words" title="'+played_words+'">' + played_words + '</div>', 
 				'<div class="log-score">' + turn_score + '</div>'
 			];
 			var log_table = document.getElementById('log-list').getElementsByTagName('tbody')[0];
@@ -580,6 +584,11 @@ var Game = {
 			for(var i = 0; i < log_values.length; i++) {
 				var new_cell  = new_row.insertCell(i);
 				new_cell.innerHTML = log_values[i];
+			}
+
+			var current_turn_tiles = document.querySelectorAll('.current-turn-letter-tile');
+			for(var i = 0; i < current_turn_tiles.length; i++) {
+				current_turn_tiles[i].classList.remove('current-turn-letter-tile')
 			}
 			
 			// Increment turn variable
