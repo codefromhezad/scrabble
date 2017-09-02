@@ -60,7 +60,7 @@ var Game = {
 			Game.players[i].id = i;
 			Game.players[i].current_score = 0;
 			Game.players[i].current_word_direction = null;
-			Game.players[i].current_played_word = "";
+			Game.players[i].current_played_words = "";
 			Game.players[i].current_word_cells_id = [];
 			Game.players[i].current_allowed_cells = null;
 			Game.players[i].letters_pool = [];
@@ -434,56 +434,144 @@ var Game = {
 	},
 
 	end_current_turn: function() {
-		var turn_is_valid = true;
-		var turn_letters_bounds = Game.find_current_word_boundaries();
-		var current_word_full_cells_ids = [];
-		Game.current_playing_player.current_played_word = "";
+		var word_bounds = Game.find_current_word_boundaries();
+		Game.current_playing_player.current_played_words = "";
 
-		if( Game.current_playing_player.current_word_direction == null ) {
+		var num_placed_letters = Game.current_playing_player.current_word_cells_id.length;
+		
+		if( num_placed_letters ) {
 
-			// @TODO: Find current word when turn ends with only one letter added (no word direction set)
+			if( ! Game.current_playing_player.current_word_direction ) {
+				var cell_id = Game.current_playing_player.current_word_cells_id[0];
+				var cell_coords = Game.conv_1d_to_2d(cell_id);
 
-		} else {
-			var word_bounds = turn_letters_bounds[Game.current_playing_player.current_word_direction];
+				var left_id  = cell_coords[0] > 0 ? Game.conv_2d_to_1d(cell_coords[0] - 1, cell_coords[1]) : null;
+				var right_id = cell_coords[0] < GAME_NUM_CELLS_PER_SIDE - 1 ? Game.conv_2d_to_1d(cell_coords[0] + 1, cell_coords[1]) : null;
 
-			if( Game.current_playing_player.current_word_direction == "horizontal" ) {
-				var walker_adder = 1;
-			} else {
-				var walker_adder = GAME_NUM_CELLS_PER_SIDE;
+				if( left_id && Game.current_cells_value[left_id] ||
+					right_id && Game.current_cells_value[right_id] ) {
+
+					Game.current_playing_player.current_word_direction = "horizontal";
+				} else {
+					Game.current_playing_player.current_word_direction = "vertical";
+				}
 			}
 
-			var walker_cell_index = word_bounds[0] !== null ? word_bounds[0] + walker_adder : 0;
-			while(walker_cell_index < word_bounds[1]) {
-				current_word_full_cells_ids.push(walker_cell_index);
-				Game.current_playing_player.current_played_word += Game.current_cells_value[walker_cell_index];
-				walker_cell_index += walker_adder;
+			if( Game.current_playing_player.current_word_direction == "vertical" ) {
+				var primary_word_bounds = word_bounds.vertical;
+
+				var primary_walker_adder = GAME_NUM_CELLS_PER_SIDE;
+				var secondary_walker_adder = 1;
+			} else if( Game.current_playing_player.current_word_direction == "horizontal" ) {
+				var primary_word_bounds = word_bounds.horizontal;
+
+				var primary_walker_adder = 1;
+				var secondary_walker_adder = GAME_NUM_CELLS_PER_SIDE;
 			}
+			
+			var primary_walker_cell_index = primary_word_bounds[0] !== null ? primary_word_bounds[0] + primary_walker_adder : 0;
+			var words_found = [];
+			words_found[0] = "";
+
+			var get_prev_next_adj_ids = function(cell_id) {
+				var cell_coords = Game.conv_1d_to_2d(cell_id);
+
+				if( Game.current_playing_player.current_word_direction == "vertical" ) {
+
+					var prev_adjacent_id = cell_coords[0] > 0 ? Game.conv_2d_to_1d(cell_coords[0] - 1, cell_coords[1]) : null;
+					var next_adjacent_id = cell_coords[0] < GAME_NUM_CELLS_PER_SIDE - 1 ? Game.conv_2d_to_1d(cell_coords[0] + 1, cell_coords[1]) : null;
+
+				} else if( Game.current_playing_player.current_word_direction == "horizontal" ) {
+					
+					var prev_adjacent_id = cell_coords[1] > 0 ? Game.conv_2d_to_1d(cell_coords[0], cell_coords[1] - 1) : null;
+					var next_adjacent_id = cell_coords[1] < GAME_NUM_CELLS_PER_SIDE - 1 ? Game.conv_2d_to_1d(cell_coords[0], cell_coords[1] + 1) : null;
+				}
+
+				return [prev_adjacent_id, next_adjacent_id];
+			}
+
+			while(primary_walker_cell_index < primary_word_bounds[1]) {
+				words_found[0] += Game.current_cells_value[primary_walker_cell_index];
+				
+				if( Game.current_playing_player.current_word_cells_id.indexOf(primary_walker_cell_index) != -1 ) {
+
+					var adj_ids = get_prev_next_adj_ids(primary_walker_cell_index);
+					
+					if( adj_ids[0] && Game.current_cells_value[adj_ids[0]] ||
+						adj_ids[1] && Game.current_cells_value[adj_ids[1]] ) {
+
+						var new_word = "";
+						var secondary_walker_cell_index = adj_ids[0];
+
+						// Find first id of subword
+						while(true) {
+							var adj_ids = get_prev_next_adj_ids(secondary_walker_cell_index);
+
+							if( adj_ids[0] === null || ( ! Game.current_cells_value[adj_ids[0]] ) ) {
+								break;
+							} else {
+								secondary_walker_cell_index = adj_ids[0];
+							}
+						}
+
+						// Add word to list
+						while(true) {
+							if( Game.current_cells_value[secondary_walker_cell_index] ) {
+								new_word += Game.current_cells_value[secondary_walker_cell_index];
+							}
+
+							var adj_ids = get_prev_next_adj_ids(secondary_walker_cell_index);
+
+							if( adj_ids[1] === null || ( ! Game.current_cells_value[adj_ids[1]] ) ) {
+								break;
+							} else {
+								secondary_walker_cell_index = adj_ids[1];
+							}
+						}
+
+						words_found.push(new_word);
+					}
+				}
+
+				primary_walker_cell_index += primary_walker_adder;
+			}
+			
+			Game.current_playing_player.current_played_words = words_found.join('+');
 		}
 
 
 		// @TODO: Check player entry validity
+		var turn_is_valid = true;
 
 
 		if( turn_is_valid ) {
 
 			// Calculate score
 			var turn_score = 0;
-			for(var letter_index in Game.current_playing_player.current_played_word) {
+			var turn_words = Game.current_playing_player.current_played_words.split('+');
 
-				var cell_letter = Game.current_playing_player.current_played_word[letter_index];
-				var base_letter_score = Game.distribution_data[cell_letter].score_value;
+			for(var i = 0; i < turn_words.length; i++) {
 
-				// Calculate player's score
-				// @TODO: Implement score-modifiers (word x2 and x3, letter x2 and x3)
-				turn_score += base_letter_score;
+				var curr_word = turn_words[i];
+
+				for(var letter_index in curr_word) {
+
+					var cell_letter = curr_word[letter_index];
+					var base_letter_score = Game.distribution_data[cell_letter].score_value;
+
+					// Calculate player's score
+					// @TODO: Implement score-modifiers (word x2 and x3, letter x2 and x3)
+					turn_score += base_letter_score;
+				}
 			}
+
 			Game.current_playing_player.current_score += turn_score;
 
 			// Update info pane log table
 			var log_values = [
 				'<div class="log-turn">' + (Game.current_turn + 1) + '</div>', 
 				'<div class="log-player" title="'+Game.current_playing_player.name+'">' + Game.current_playing_player.name + '</div>', 
-				'<div class="log-words" title="'+Game.current_playing_player.current_played_word+'">' + Game.current_playing_player.current_played_word + '</div>', 
+				'<div class="log-words" title="'+Game.current_playing_player.current_played_words+'">' + Game.current_playing_player.current_played_words + '</div>', 
 				'<div class="log-score">' + turn_score + '</div>'
 			];
 			var log_table = document.getElementById('log-list').getElementsByTagName('tbody')[0];
@@ -623,7 +711,7 @@ var Game = {
 		if( Game.current_playing_player ) {
 			Game.current_playing_player.current_word_direction = null;
 			Game.current_playing_player.current_allowed_cells = null;
-			Game.current_playing_player.current_played_word = "";
+			Game.current_playing_player.current_played_words = "";
 			Game.current_playing_player.current_word_cells_id = [];
 
 			Game.deemphasize_highlighted_cells();
