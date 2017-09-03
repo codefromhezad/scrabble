@@ -1,6 +1,16 @@
 var GAME_NUM_CELLS_PER_SIDE = 15;
 var GAME_NUM_LETTERS_PER_PLAYER = 7;
 
+var obj_merge = function(){
+    var return_obj = {};
+    var inputs = Array.prototype.slice.call(arguments);
+    for(var i = 0; i < inputs.length; i++) {
+    	var obj = inputs[i];
+    	for (var attrname in obj) { return_obj[attrname] = obj[attrname]; }
+    }
+    return return_obj;
+}
+
 var Game = {
 	settings: {
 		game_lang: "french"
@@ -19,6 +29,7 @@ var Game = {
 
 	last_hovered_cell_node: null,
 
+	special_tiles: {}, // Calculated in init()
 
 
 	/***************
@@ -33,7 +44,6 @@ var Game = {
 			console.error("Game.init() expects the id of the root node (the game container) as its first argument.");
 			return false;
 		}
-
 
 		/* Load current lang letters distribution and score data */
 		if( ! Game.load_lang_distribution_data(Game.settings.game_lang) ) {
@@ -72,9 +82,11 @@ var Game = {
 		}
 
 
-		/* Generate board node and inner board cells */
+		/* Generate board node and inner board cells
+			and then find special tiles positions and
+			update board CSS */
 		Game.generate_board_node();
-
+		Game.generate_special_tiles();
 
 		/* Generate info-pane node */
 		var info_pane_node = document.createElement('div');
@@ -169,6 +181,54 @@ var Game = {
 		Game.board_node.innerHTML = inner_board_html;
 
 		Game.root_node.appendChild(Game.board_node);
+	},
+
+	generate_special_tiles: function() {
+		var top_half_tiles = {
+			0: '3w', 3: '2l', 7: '3w', 11: '2l', 14: '3w',
+			16: '2w', 20: '3l', 24: '3l', 28: '2w',
+			32: '2w', 36: '2l', 38: '2l', 42: '2w',
+			45: '2l', 48: '2w', 52: '2l', 56: '2w', 59: '2l',
+			64: '2w', 70: '2w',
+			76: '3l', 80: '3l', 84: '3l', 88: '3l',
+			92: '2l', 96: '2l', 98: '2l', 102: '2l'
+		};
+
+		var middle_tiles = {
+			105: '3w', 108: '2l', 112: 'start', 116: '2l', 119: '3w'
+		};
+
+		var bottom_half_tiles = {};
+		
+		var board_num_tiles = GAME_NUM_CELLS_PER_SIDE * GAME_NUM_CELLS_PER_SIDE;
+
+		for(var top_index in top_half_tiles) {
+			var tile_coords = Game.conv_1d_to_2d(top_index);
+			var sym_coords = [
+				tile_coords[0],
+				GAME_NUM_CELLS_PER_SIDE - tile_coords[1]
+			];
+			var bottom_index = Game.conv_2d_to_1d(sym_coords) - GAME_NUM_CELLS_PER_SIDE;
+			bottom_half_tiles[bottom_index] = top_half_tiles[top_index];
+		}
+
+		Game.special_tiles = obj_merge(
+			top_half_tiles, 
+			middle_tiles,
+			bottom_half_tiles
+		);
+
+		/* Style board special tiles */
+		for(var tile_index in Game.special_tiles) {
+			var cell_node = document.querySelector('#board div[data-index="'+tile_index+'"]');
+			cell_node.setAttribute('special', Game.special_tiles[tile_index]);
+
+			var inner_node = document.createElement('div');
+			inner_node.classList.add('special');
+			inner_node.classList.add('special-' + Game.special_tiles[tile_index]);
+
+			cell_node.appendChild(inner_node);
+		}
 	},
 
 	register_ux_listeners: function() {

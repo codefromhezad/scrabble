@@ -67,6 +67,8 @@ html, body {
 
 #board {
 	position: relative;
+	min-width: 935px;
+    box-sizing: border-box;
 	top: 50px;
 	left: 50px;
 	display: inline-block;
@@ -106,6 +108,34 @@ html, body {
 
 #board .inner-wrapper .cell.invalid-move {
 	background: #dcc2b9;
+}
+
+#board .inner-wrapper .cell .special {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+}
+
+#board .inner-wrapper .cell .special.special-3w {
+	background: #fa6850;
+}
+
+#board .inner-wrapper .cell .special.special-2w {
+	background: #fbb9a7;
+}
+
+#board .inner-wrapper .cell .special.special-3l {
+	background: #3e9eb5;
+}
+
+#board .inner-wrapper .cell .special.special-2l {
+	background: #bcd6d2;
+}
+
+#board .inner-wrapper .cell .special.special-start {
+	background: #fbb9a7;
 }
 
 #board .inner-wrapper .cell .letter-tile {
