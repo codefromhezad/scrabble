@@ -7,5 +7,10 @@ var game_lang_data = {
 		"score_table_player": "Joueur",
 		"score_table_words": "Mot(s)",
 		"score_table_score": "Score",
+
+		"tile-special-3w": "Mot\ncompte\ntriple",
+		"tile-special-2w": "Mot\ncompte\ndouble",
+		"tile-special-3l": "Lettre\ncompte\ntriple",
+		"tile-special-2l": "Lettre\ncompte\ndouble",
 	}
 }

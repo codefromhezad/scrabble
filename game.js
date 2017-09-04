@@ -228,13 +228,17 @@ var Game = {
 
 		/* Style board special tiles */
 		for(var tile_index in Game.special_tiles) {
+			var tile_value = Game.special_tiles[tile_index];
 			var cell_node = document.querySelector('#board div[data-index="'+tile_index+'"]');
-			cell_node.setAttribute('special', Game.special_tiles[tile_index]);
+			cell_node.setAttribute('special', tile_value);
 
 			var inner_node = document.createElement('div');
 			inner_node.classList.add('special');
-			inner_node.classList.add('special-' + Game.special_tiles[tile_index]);
+			inner_node.classList.add('special-' + tile_value);
 
+			if( tile_value != "start" ) {
+				inner_node.innerHTML = Game.lang("tile-special-" + tile_value);
+			}
 			cell_node.appendChild(inner_node);
 		}
 	},
