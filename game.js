@@ -17,6 +17,7 @@ var Game = {
 	},
 
 	distribution_data: {},
+	lang_data: {},
 	current_cells_value: {},
 	game_letters_pool: {},
 
@@ -45,8 +46,9 @@ var Game = {
 			return false;
 		}
 
-		/* Load current lang letters distribution and score data */
-		if( ! Game.load_lang_distribution_data(Game.settings.game_lang) ) {
+
+		/* Load current lang letters distribution and score data, and UX lang data */
+		if( ! Game.load_lang_data(Game.settings.game_lang) ) {
 			return false;
 		}
 
@@ -114,9 +116,9 @@ var Game = {
 				'<table id="log-list">'+
 					'<thead><tr>'+
 						'<th style="width: 25px;">#</th>'+
-						'<th style="width: 100px;">Joueur</th>'+
-						'<th>Mot(s)</th>'+
-						'<th style="width: 40px;">Score</th>'+
+						'<th style="width: 100px;">'+Game.lang('score_table_player')+'</th>'+
+						'<th>'+Game.lang('score_table_words')+'</th>'+
+						'<th style="width: 40px;">'+Game.lang('score_table_score')+'</th>'+
 					'</tr></thead>'+
 					'<tbody>'+
 					'</tbody>'+
@@ -149,13 +151,19 @@ var Game = {
 		Game.set_playing_player(starting_player_id);
 	},
 
-	load_lang_distribution_data: function(lang_slug) {
+	load_lang_data: function(lang_slug) {
 		if( ! game_letters_data[lang_slug] ) {
 			console.error("Trying to load letters distribution data for a non existing language ('"+lang_slug+"')");
 			return false;
 		}
 
+		if( ! game_lang_data[lang_slug] ) {
+			console.error("Trying to load lang data for a non existing language ('"+lang_slug+"')");
+			return false;
+		}
+
 		Game.distribution_data = game_letters_data[lang_slug];
+		Game.lang_data = game_lang_data[lang_slug];
 
 		return true;
 	},
@@ -388,6 +396,18 @@ var Game = {
 	/*******************
 	* HELPER METHODS *
 	********************/
+	lang: function(lang_data_id) {
+		var return_value;
+
+		if( Game.lang_data[lang_data_id] ) {
+			return_value = Game.lang_data[lang_data_id];
+		} else {
+			return_value = lang_data_id;
+		}
+
+		return return_value;
+	},
+
 	conv_1d_to_2d: function(n) {
 		return [
 			n % GAME_NUM_CELLS_PER_SIDE,
