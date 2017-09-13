@@ -73,6 +73,7 @@ var Game = {
 			Game.players[i].current_score = 0;
 			Game.players[i].current_word_direction = null;
 			Game.players[i].current_played_words = "";
+			Game.players[i].current_played_cells_by_word = [];
 			Game.players[i].current_word_cells_id = [];
 			Game.players[i].current_allowed_cells = null;
 			Game.players[i].letters_pool = [];
@@ -522,6 +523,7 @@ var Game = {
 	end_current_turn: function() {
 		var word_bounds = Game.find_current_word_boundaries();
 		Game.current_playing_player.current_played_words = "";
+		Game.current_playing_player.current_played_cells_by_word = [];
 
 		var num_placed_letters = Game.current_playing_player.current_word_cells_id.length;
 		
@@ -559,6 +561,9 @@ var Game = {
 			var words_found = [];
 			words_found[0] = "";
 
+			var cells_found = [];
+			cells_found[0] = [];   // Format of each item : { cell_id: <id>, free_cell: true|false, letter: <tile letter as string> (for debug purposes) }
+
 			var get_prev_next_adj_ids = function(cell_id) {
 				var cell_coords = Game.conv_1d_to_2d(cell_id);
 
@@ -579,7 +584,9 @@ var Game = {
 			while(primary_walker_cell_index < primary_word_bounds[1]) {
 				words_found[0] += Game.current_cells_value[primary_walker_cell_index];
 				
-				if( Game.current_playing_player.current_word_cells_id.indexOf(primary_walker_cell_index) != -1 ) {
+				if( Game.current_playing_player.current_word_cells_id.indexOf(primary_walker_cell_index) != -1 ) { // If letter played by player
+
+					cells_found[0].push({cell_id: primary_walker_cell_index, free_cell: true, letter: Game.current_cells_value[primary_walker_cell_index]});
 
 					var adj_ids = get_prev_next_adj_ids(primary_walker_cell_index);
 					
@@ -587,6 +594,8 @@ var Game = {
 						adj_ids[1] && Game.current_cells_value[adj_ids[1]] ) {
 
 						var new_word = "";
+						var new_word_cells = [];
+
 						var secondary_walker_cell_index = adj_ids[0];
 
 						// Find first id of subword
@@ -604,6 +613,12 @@ var Game = {
 						while(true) {
 							if( Game.current_cells_value[secondary_walker_cell_index] ) {
 								new_word += Game.current_cells_value[secondary_walker_cell_index];
+
+								if( Game.current_playing_player.current_word_cells_id.indexOf(secondary_walker_cell_index) != -1 ) { // If letter played by player
+									new_word_cells.push({cell_id: secondary_walker_cell_index, free_cell: true, letter: Game.current_cells_value[secondary_walker_cell_index]});
+								} else {
+									new_word_cells.push({cell_id: secondary_walker_cell_index, free_cell: false, letter: Game.current_cells_value[secondary_walker_cell_index]});
+								}
 							}
 
 							var adj_ids = get_prev_next_adj_ids(secondary_walker_cell_index);
@@ -616,50 +631,93 @@ var Game = {
 						}
 
 						words_found.push(new_word);
+						cells_found.push(new_word_cells);
 					}
+				} else {
+					cells_found[0].push({cell_id: primary_walker_cell_index, free_cell: false, letter: Game.current_cells_value[primary_walker_cell_index]});
 				}
 
 				primary_walker_cell_index += primary_walker_adder;
 			}
 			
 			Game.current_playing_player.current_played_words = words_found.join('+');
+			Game.current_playing_player.current_played_cells_by_word = cells_found;
 		}
 
 
 		// @TODO: Check player entry validity
 		var turn_is_valid = true;
-
+		var words_log_html = "";
 
 		if( turn_is_valid ) {
 
 			// Calculate score
-			var turn_score = 0;
 			var turn_words = Game.current_playing_player.current_played_words.split('+');
+			var turn_cells = Game.current_playing_player.current_played_cells_by_word;
+
+			var turn_score = 0;
 
 			for(var i = 0; i < turn_words.length; i++) {
 
 				var curr_word = turn_words[i];
+				var curr_cells = turn_cells[i];
+
+				var this_word_multiplier = 1;
+				var this_word_score = 0;
+				var this_word_letters_log_html = "";
 
 				for(var letter_index in curr_word) {
 
-					var cell_letter = curr_word[letter_index];
-					var base_letter_score = Game.distribution_data[cell_letter].score_value;
+					var cell_letter = curr_word[letter_index]; 
+					var cell_turn_data = curr_cells[letter_index];
 
-					// Calculate player's score
-					// @TODO: Implement score-modifiers (word x2 and x3, letter x2 and x3)
-					turn_score += base_letter_score;
+					var base_letter_score = Game.distribution_data[cell_letter].score_value;
+					var special_tile_data = Game.special_tiles[cell_turn_data.cell_id];
+
+					var this_letter_log_opening_span = '<span class="letter">';
+
+					if( cell_turn_data.free_cell && special_tile_data ) {
+						if( special_tile_data == "start" ) { // Star (starting) tile doubles the word points
+							var modifier_type = "start";
+							var modifier_multiplicator = 2;
+						} else {
+							var modifier_string = special_tile_data.split('');
+							var modifier_type = modifier_string[1].toLowerCase();
+							var modifier_multiplicator = parseInt(modifier_string[0]);
+						}
+
+						if( modifier_type == "l" ) { // Letter modifier
+							base_letter_score *= modifier_multiplicator;
+							this_letter_log_opening_span = '<span class="modifier letter" data-modifier-type="l" data-modifier-multiplicator="'+modifier_multiplicator+'">';
+						} else if( modifier_type == "w" || modifier_type == "start" ) {
+							this_word_multiplier *= modifier_multiplicator;
+						}
+					}
+
+					this_word_letters_log_html += this_letter_log_opening_span + cell_letter.replace('*', '_') + '</span>';
+					this_word_score += base_letter_score;
 				}
+
+				var this_word_log_opening_span = '<span class="word">';
+
+				if( this_word_multiplier > 1 ) {
+					this_word_score *= this_word_multiplier;
+					this_word_log_opening_span = '<span class="modifier word" data-modifier-type="w" data-modifier-multiplicator="'+this_word_multiplier+'">';
+				}
+
+				words_log_html += this_word_log_opening_span + this_word_letters_log_html + '</span>';
+				turn_score += this_word_score
 			}
 
 			Game.current_playing_player.current_score += turn_score;
 
-			var played_words = Game.current_playing_player.current_played_words.replace(/\+/g, ' + ');
+			var played_words_html_title = Game.current_playing_player.current_played_words.replace(/\+/g, ' + ');
 
 			// Update info pane log table
 			var log_values = [
 				'<div class="log-turn">' + (Game.current_turn + 1) + '</div>', 
 				'<div class="log-player" title="'+Game.current_playing_player.name+'">' + Game.current_playing_player.name + '</div>', 
-				'<div class="log-words" title="'+played_words+'">' + played_words + '</div>', 
+				'<div class="log-words" title="'+played_words_html_title+'">' + words_log_html + '</div>', 
 				'<div class="log-score">' + turn_score + '</div>'
 			];
 			var log_table = document.getElementById('log-list').getElementsByTagName('tbody')[0];
@@ -805,6 +863,7 @@ var Game = {
 			Game.current_playing_player.current_word_direction = null;
 			Game.current_playing_player.current_allowed_cells = null;
 			Game.current_playing_player.current_played_words = "";
+			Game.current_playing_player.current_played_cells_by_word = [];
 			Game.current_playing_player.current_word_cells_id = [];
 
 			Game.deemphasize_highlighted_cells();
@@ -850,7 +909,7 @@ var Game = {
 		var letter_score_html = letter_score;
 		var blank_class = '';
 
-		if( letter == '[blank]' ) {
+		if( letter == '*' ) {
 			letter_html = '*';
 			letter_score_html = '*';
 			blank_class = 'is-blank';
