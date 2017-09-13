@@ -178,7 +178,7 @@ var Game = {
 		for(var i = 0; i < GAME_NUM_CELLS_PER_SIDE; i++) {
 			for(var j = 0; j < GAME_NUM_CELLS_PER_SIDE; j++) {
 				var cell_index = j + i * GAME_NUM_CELLS_PER_SIDE;
-				inner_board_html += '<div class="cell" data-index="'+cell_index+'" data-letter=""></div>';
+				inner_board_html += '<div class="cell" data-index="'+cell_index+'" data-letter=""><div class="highlighter"></div></div>';
 			}
 
 			inner_board_html += '<div style="clear: both;"></div>';
