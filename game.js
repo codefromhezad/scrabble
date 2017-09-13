@@ -646,6 +646,7 @@ var Game = {
 
 
 		// @TODO: Check player entry validity
+		// @TODO: Implement "SCRABBLE !" when all current player's letters are added in one turn (+50points after processing modifiers)
 		var turn_is_valid = true;
 		var words_log_html = "";
 

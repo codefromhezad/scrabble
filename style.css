@@ -282,6 +282,7 @@ html, body {
 	width: 100%;
 	border-collapse: collapse;
 	font-size: 14px;
+	line-height: 17px;
 	box-sizing: border-box;
 	table-layout: fixed;
 }
@@ -304,7 +305,7 @@ html, body {
 #info-pane .info-block#info-block-log #log-list th,
 #info-pane .info-block#info-block-log #log-list td {
 	border: 1px solid #cdc6aa;
-	padding: 2px 6px;
+	padding: 4px 6px;
 }
 
 #info-pane .info-block#info-block-log #log-list td div {
@@ -316,4 +317,55 @@ html, body {
 #info-pane .info-block#info-block-log #log-list .log-turn {
 	text-align: center;
 	font-weight: 600;
+}
+
+#info-pane .info-block#info-block-log #log-list .log-words {
+	line-height: 17px;
+}
+
+#info-pane .info-block#info-block-log #log-list .log-words .word {
+	display: inline-block;
+    margin-right: 6px;
+    /*padding: 0 5px;*/
+    background: #dcd5c5;
+}
+
+#info-pane .info-block#info-block-log #log-list .log-words .word[data-modifier-multiplicator="3"] {
+	background: #fa6850;
+	font-weight: bold;
+}
+
+#info-pane .info-block#info-block-log #log-list .log-words .word[data-modifier-multiplicator="2"]{
+	background: #fbb9a7;
+	font-weight: bold;
+}
+
+#info-pane .info-block#info-block-log #log-list .log-words .word .letter {
+	padding: 0 1px;
+    padding-bottom: 4px;
+    display: inline-block;
+}
+
+#info-pane .info-block#info-block-log #log-list .log-words .word .letter:first-child {
+	margin-left: 3px;
+}
+
+#info-pane .info-block#info-block-log #log-list .log-words .word .letter:last-child {
+	margin-right: 3px;
+}
+
+#info-pane .info-block#info-block-log #log-list .log-words .word .letter[data-modifier-multiplicator] {
+	font-weight: bold;
+    padding-left: 3px;
+    padding-right: 5px;
+    margin-left: 1px;
+    margin-right: 1px;
+}
+
+#info-pane .info-block#info-block-log #log-list .log-words .word .letter[data-modifier-multiplicator="3"] {
+	background: #3e9eb5;
+}
+
+#info-pane .info-block#info-block-log #log-list .log-words .word .letter[data-modifier-multiplicator="2"] {
+	background: #bcd6d2;
 }
