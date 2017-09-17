@@ -326,7 +326,6 @@ html, body {
 #info-pane .info-block#info-block-log #log-list .log-words .word {
 	display: inline-block;
     margin-right: 6px;
-    /*padding: 0 5px;*/
     background: #dcd5c5;
 }
 

@@ -1,4 +1,7 @@
 /* How to convert letters distribution for a language
+ *
+ * 0) Include this file using a script tag in index.html
+ *
  * 1) Copy HTML code of distribution table for your language
  *    from this URL : https://en.wikipedia.org/wiki/Scrabble_letter_distributions
  *

@@ -4,6 +4,8 @@ var game_letters_data = {
 
 var game_lang_data = {
 	"french": {
+		"aspell_dict": "fr",
+		
 		"score_table_player": "Joueur",
 		"score_table_words": "Mot(s)",
 		"score_table_score": "Score",
