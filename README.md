@@ -12,7 +12,6 @@ The spell-checking script is coded in PHP and uses GNUS's Aspell. Since I'm codi
 #### OSX
 
 1) Install the Aspell library and all its default language dictionaries using `brew`. <sup><a id="osx_aspell_install_ref" href="#osx_aspell_install_note">1</a></sup>
-
 ```bash
 brew install aspell
 ```
@@ -32,8 +31,6 @@ August 2017		| Just some code I'll probably never finish for fun.
 
 ## Footnotes
 
-##### <a id="osx_aspell_install_note">#1</a>
+**<a id="osx_aspell_install_note">#1</a>** As of September 2017, the default languages are *fr*, *en*, *es* and *de*. If you need to install additionnal languages, type `brew info aspell` in your terminal to see the required parameters to install these dictionaries. 
 
-As of September 2017, the default languages are *fr*, *en*, *es* and *de*. If you need to install additionnal languages, type `brew info aspell` in your terminal to see the required parameters to install these dictionaries. 
-
-Please note that right now (still Sep. 2017), the icelandic language dictionnary (`--with-lang-is`) has a UTF-8 bug and will crash the installation. For this reason, as tempting as it is, avoid using the parameter `--with-all-langs`. Maybe it'll be fixed when you'll be reading this, I don't know. (<a href="#osx_aspell_install_ref">↩</a>)
+Please note that right now (still Sep. 2017), the icelandic language dictionnary (`--with-lang-is`) has a UTF-8 bug and will crash the installation. For this reason, as tempting as it is, avoid using the parameter `--with-all-langs`. Maybe it'll be fixed when you'll be reading this, I don't know. <a href="#osx_aspell_install_ref">↩</a>
