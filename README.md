@@ -20,7 +20,11 @@ TL;DR; You'll need :
 brew install aspell
 ```
 
-
+2) Type the next command to find to full path to the `aspell` binary on your system
+```bash
+which aspell
+```
+and use this value to set the `ASPELL_PATH` define at the top of `server/spell_check.php` if it's different.
 
 
 ## Log Book 
