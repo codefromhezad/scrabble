@@ -1,15 +1,7 @@
 var GAME_NUM_CELLS_PER_SIDE = 15;
 var GAME_NUM_LETTERS_PER_PLAYER = 7;
 
-var obj_merge = function(){
-    var return_obj = {};
-    var inputs = Array.prototype.slice.call(arguments);
-    for(var i = 0; i < inputs.length; i++) {
-    	var obj = inputs[i];
-    	for (var attrname in obj) { return_obj[attrname] = obj[attrname]; }
-    }
-    return return_obj;
-}
+var GAME_SPELL_CHECKER_URL = "./server/spell_check.php";
 
 var Game = {
 	settings: {
@@ -520,6 +512,38 @@ var Game = {
 		return count;
 	},
 
+	check_words_validity: function(words, after_check_cb) {
+		// @TODO : Handle "joker" tiles in the spell-checker script
+		Request.post(GAME_SPELL_CHECKER_URL, {word: words, lang: Game.lang_data['__aspell_lang_code']}, function(xhr) {
+			// Request success
+			var jsonResponse = JSON.parse(xhr.responseText);
+			
+			if( jsonResponse.status && jsonResponse.status == "ok" ) {
+				var words_validity = jsonResponse.message;
+				var invalid_words = [];
+
+				for(var v_word in words_validity) {
+					if( words_validity[v_word] == "invalid" ) {
+						invalid_words.push(v_word);
+					}
+				}
+
+				after_check_cb(invalid_words);
+			} else {
+				console.error('An error occured on the server');
+				console.error('[DEBUG] SERVER MESSAGE :');
+				console.error(jsonResponse.message);
+			}
+
+		}, function(xhr) {
+
+			// Request error
+			console.error('An error occured while contacting the spell_checker script :/');
+			console.error('[DEBUG] XHR OBJECT :');
+			console.error(xhr);
+		})
+	},
+
 	end_current_turn: function() {
 		var word_bounds = Game.find_current_word_boundaries();
 		Game.current_playing_player.current_played_words = "";
@@ -644,102 +668,112 @@ var Game = {
 			Game.current_playing_player.current_played_cells_by_word = cells_found;
 		}
 
+		Game.check_words_validity(Game.current_playing_player.current_played_words.replace('+', ' '), function(invalid_words) {
+			
+			if( invalid_words.length == 0 ) {
+				// Valid turn !
 
-		// @TODO: Check player entry validity
-		// @TODO: Implement "SCRABBLE !" when all current player's letters are added in one turn (+50points after processing modifiers)
-		var turn_is_valid = true;
-		var words_log_html = "";
+				var words_log_html = "";
+			
+				// Calculate score
+				var turn_words = Game.current_playing_player.current_played_words.split('+');
+				var turn_cells = Game.current_playing_player.current_played_cells_by_word;
 
-		if( turn_is_valid ) {
+				var turn_score = 0;
 
-			// Calculate score
-			var turn_words = Game.current_playing_player.current_played_words.split('+');
-			var turn_cells = Game.current_playing_player.current_played_cells_by_word;
+				for(var i = 0; i < turn_words.length; i++) {
 
-			var turn_score = 0;
+					var curr_word = turn_words[i];
+					var curr_cells = turn_cells[i];
 
-			for(var i = 0; i < turn_words.length; i++) {
+					var this_word_multiplier = 1;
+					var this_word_score = 0;
+					var this_word_letters_log_html = "";
 
-				var curr_word = turn_words[i];
-				var curr_cells = turn_cells[i];
+					for(var letter_index in curr_word) {
 
-				var this_word_multiplier = 1;
-				var this_word_score = 0;
-				var this_word_letters_log_html = "";
+						var cell_letter = curr_word[letter_index]; 
+						var cell_turn_data = curr_cells[letter_index];
 
-				for(var letter_index in curr_word) {
+						var base_letter_score = Game.distribution_data[cell_letter].score_value;
+						var special_tile_data = Game.special_tiles[cell_turn_data.cell_id];
 
-					var cell_letter = curr_word[letter_index]; 
-					var cell_turn_data = curr_cells[letter_index];
+						var this_letter_log_opening_span = '<span class="letter">';
 
-					var base_letter_score = Game.distribution_data[cell_letter].score_value;
-					var special_tile_data = Game.special_tiles[cell_turn_data.cell_id];
+						if( cell_turn_data.free_cell && special_tile_data ) {
+							if( special_tile_data == "start" ) { // Star (starting) tile doubles the word points
+								var modifier_type = "start";
+								var modifier_multiplicator = 2;
+							} else {
+								var modifier_string = special_tile_data.split('');
+								var modifier_type = modifier_string[1].toLowerCase();
+								var modifier_multiplicator = parseInt(modifier_string[0]);
+							}
 
-					var this_letter_log_opening_span = '<span class="letter">';
-
-					if( cell_turn_data.free_cell && special_tile_data ) {
-						if( special_tile_data == "start" ) { // Star (starting) tile doubles the word points
-							var modifier_type = "start";
-							var modifier_multiplicator = 2;
-						} else {
-							var modifier_string = special_tile_data.split('');
-							var modifier_type = modifier_string[1].toLowerCase();
-							var modifier_multiplicator = parseInt(modifier_string[0]);
+							if( modifier_type == "l" ) { // Letter modifier
+								base_letter_score *= modifier_multiplicator;
+								this_letter_log_opening_span = '<span class="modifier letter" data-modifier-type="l" data-modifier-multiplicator="'+modifier_multiplicator+'">';
+							} else if( modifier_type == "w" || modifier_type == "start" ) {
+								this_word_multiplier *= modifier_multiplicator;
+							}
 						}
 
-						if( modifier_type == "l" ) { // Letter modifier
-							base_letter_score *= modifier_multiplicator;
-							this_letter_log_opening_span = '<span class="modifier letter" data-modifier-type="l" data-modifier-multiplicator="'+modifier_multiplicator+'">';
-						} else if( modifier_type == "w" || modifier_type == "start" ) {
-							this_word_multiplier *= modifier_multiplicator;
-						}
+						this_word_letters_log_html += this_letter_log_opening_span + cell_letter.replace('*', '_') + '</span>';
+						this_word_score += base_letter_score;
 					}
 
-					this_word_letters_log_html += this_letter_log_opening_span + cell_letter.replace('*', '_') + '</span>';
-					this_word_score += base_letter_score;
+					var this_word_log_opening_span = '<span class="word">';
+
+					if( this_word_multiplier > 1 ) {
+						this_word_score *= this_word_multiplier;
+						this_word_log_opening_span = '<span class="modifier word" data-modifier-type="w" data-modifier-multiplicator="'+this_word_multiplier+'">';
+					}
+
+					words_log_html += this_word_log_opening_span + this_word_letters_log_html + '</span>';
+					turn_score += this_word_score
 				}
 
-				var this_word_log_opening_span = '<span class="word">';
+				// @TODO: Implement "SCRABBLE !" when all current player's letters are added in one turn (+50points after processing modifiers)
 
-				if( this_word_multiplier > 1 ) {
-					this_word_score *= this_word_multiplier;
-					this_word_log_opening_span = '<span class="modifier word" data-modifier-type="w" data-modifier-multiplicator="'+this_word_multiplier+'">';
+				Game.current_playing_player.current_score += turn_score;
+
+				var played_words_html_title = Game.current_playing_player.current_played_words.replace(/\+/g, ' + ');
+
+				// Update info pane log table
+				var log_values = [
+					'<div class="log-turn">' + (Game.current_turn + 1) + '</div>', 
+					'<div class="log-player" title="'+Game.current_playing_player.name+'">' + Game.current_playing_player.name + '</div>', 
+					'<div class="log-words" title="'+played_words_html_title+'">' + words_log_html + '</div>', 
+					'<div class="log-score">' + turn_score + '</div>'
+				];
+				var log_table = document.getElementById('log-list').getElementsByTagName('tbody')[0];
+				var new_row   = log_table.insertRow(log_table.rows.length);
+
+				for(var i = 0; i < log_values.length; i++) {
+					var new_cell  = new_row.insertCell(i);
+					new_cell.innerHTML = log_values[i];
 				}
 
-				words_log_html += this_word_log_opening_span + this_word_letters_log_html + '</span>';
-				turn_score += this_word_score
+				var current_turn_tiles = document.querySelectorAll('.current-turn-letter-tile');
+				for(var i = 0; i < current_turn_tiles.length; i++) {
+					current_turn_tiles[i].classList.remove('current-turn-letter-tile')
+				}
+				
+				// Increment turn variable
+				Game.current_turn += 1;
+				
+				// Set turn to next player
+				Game.set_playing_player(Game.current_playing_player.next_player_id);
+
+			} else {
+				// Oops there's an invalid word !
+
+				// @TODO: Prettier error message
+				// @TODO: Cancel player moves
+				alert('The following words were not found in the dictionnary : ' + invalid_words.join(','));
 			}
+		});
 
-			Game.current_playing_player.current_score += turn_score;
-
-			var played_words_html_title = Game.current_playing_player.current_played_words.replace(/\+/g, ' + ');
-
-			// Update info pane log table
-			var log_values = [
-				'<div class="log-turn">' + (Game.current_turn + 1) + '</div>', 
-				'<div class="log-player" title="'+Game.current_playing_player.name+'">' + Game.current_playing_player.name + '</div>', 
-				'<div class="log-words" title="'+played_words_html_title+'">' + words_log_html + '</div>', 
-				'<div class="log-score">' + turn_score + '</div>'
-			];
-			var log_table = document.getElementById('log-list').getElementsByTagName('tbody')[0];
-			var new_row   = log_table.insertRow(log_table.rows.length);
-
-			for(var i = 0; i < log_values.length; i++) {
-				var new_cell  = new_row.insertCell(i);
-				new_cell.innerHTML = log_values[i];
-			}
-
-			var current_turn_tiles = document.querySelectorAll('.current-turn-letter-tile');
-			for(var i = 0; i < current_turn_tiles.length; i++) {
-				current_turn_tiles[i].classList.remove('current-turn-letter-tile')
-			}
-			
-			// Increment turn variable
-			Game.current_turn += 1;
-			
-			// Set turn to next player
-			Game.set_playing_player(Game.current_playing_player.next_player_id);
-		}
 	},
 
 	find_current_word_direction: function() {

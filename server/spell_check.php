@@ -5,10 +5,9 @@
  * 'word' : word to spell-check
  *
  * Returns JSON object containing:
- *	"status": 'valid' if word is valid, 
- *		  	  'invalid' if not and,
+ *	"status": 'ok' if word is valid, 
  *			  'error' if an error occured from the server, from aspell or from the $_POST data validation
- *  "message": '' (empty string) if no error occured or
+ *  "message": List of words and their validity if no error, or
  *			   '<error message>' if an error occured.
  */
 
@@ -18,7 +17,7 @@ define('ASPELL_PATH', '/usr/local/bin/aspell');
 
 
 /* Switch between POST and GET to help debugging */
-$input_data = $_GET;
+$input_data = $_POST;
 
 
 
@@ -43,6 +42,7 @@ function send_return_data($status, $message = "") {
 $processed_input_data = array();
 foreach ($input_data as $input_param_name => $input_param_value) {
 	if( in_array($input_param_name, $expected_input_params) ) {
+		$input_param_value = rawurldecode($input_param_value);
 		$input_param_value = str_replace('"', "", $input_param_value);
 		$input_param_value = str_replace("'", "", $input_param_value);
 		$processed_input_data[$input_param_name] = escapeshellcmd($input_param_value);
@@ -54,8 +54,6 @@ foreach ($input_data as $input_param_name => $input_param_value) {
 if( count($processed_input_data) != count($expected_input_params) ) {
 	send_return_data('error', 'Missing parameters for the spell-checker');
 }
-
-
 
 /* Get a list of installed aspell dicts */
 $aspell_dicts = shell_exec(ASPELL_PATH.' dump dicts 2>&1');
@@ -75,6 +73,8 @@ if( ! in_array($processed_input_data['lang'], $aspell_dicts_list) ) {
 }
 
 /* Run aspell command */
+$input_words = explode(' ', $processed_input_data['word']);
+$output_validity = array();
 $aspell_data = shell_exec('echo "'.$processed_input_data['word'].'" | '.ASPELL_PATH.' -a -d '.$processed_input_data['lang'].' 2>&1');
 
 if( ! $aspell_data ) {
@@ -92,15 +92,13 @@ if( $aspell_data_lines[0][0] != "@" ) {
 }
 
 /* Finally check provided word is valid in selected lang or not ! */
-if( $aspell_data_lines[1][0] == "&" ) {
-	send_return_data('invalid');
-} elseif( $aspell_data_lines[1][0] == "*" ) {
-	send_return_data('valid');
-} else {
-	send_return_data('error', '[aspell] Unrecognized response : ' . $aspell_data_lines[1]);
+for($i = 0; $i < count($input_words); $i++) {
+	if( $aspell_data_lines[$i + 1][0] == "&" ) {
+		$output_validity[ $input_words[$i] ] = "invalid";
+	} elseif( $aspell_data_lines[$i + 1][0] == "*" ) {
+		$output_validity[ $input_words[$i] ] = "valid";
+	}
 }
 
-
-/* If script hasn't returned data by now, something super weird happened */
-send_return_data('error', 'Well, this error should never appear, that\'s incredibly weird :/');
+send_return_data('ok', $output_validity);
 
