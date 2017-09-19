@@ -217,6 +217,10 @@ html, body {
 	width: 50%;
 }
 
+#info-pane .info-block#info-block-players .info-player-name.current {
+	font-weight: bold;
+}
+
 #info-pane .info-block#info-block-players dd {
 	float: left;
 	display: block;

@@ -494,6 +494,13 @@ var Game = {
 
 		// Current player info
 		document.getElementById('info-block-current-player').innerHTML = Game.current_playing_player.name;
+
+		// Current player highlight
+		var currentPlayerDLEl = document.querySelector('#players-list .info-player-name.current');
+		if( currentPlayerDLEl ) {
+			currentPlayerDLEl.classList.remove('current');
+		}
+		document.getElementById('info-players-name-' + Game.current_playing_player.id).classList.add('current')
 	},
 
 	/*******************
