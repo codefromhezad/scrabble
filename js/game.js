@@ -80,8 +80,8 @@ var Game = {
 			
 			var game_name = document.getElementById('new-game-game-name').value;
 
-			if( (! game_name) || game_name.match(/^\s+/) || game_name.length > 20 ) {
-				Game.show_notice_popup('error', 'The game name you chose is not valid (Can\'t be empty, start with spaces or contain more than 20 characters)');
+			if( (! game_name) || game_name.match(/^\s+/) || game_name.length > 40 ) {
+				Game.show_notice_popup('error', 'The game name you chose is not valid (Can\'t be empty, start with spaces or contain more than 40 characters)');
 				return;
 			}
 			
@@ -1288,13 +1288,17 @@ var Game = {
 	},
 
 	pick_letters_for_player: function(player_id) {
-		// @TODO : Check randomness of the "random" selection. It looks like vowels 
-		// are selected quite rarely but I may be wrong
 		var player = Game.players[player_id];
 		var num_letters_to_draw = GAME_NUM_LETTERS_PER_PLAYER - player.letters_pool.length;
 
+		var available_letters = [];
+		for(var letter_val in Game.game_letters_pool) {
+			for(var i = 0; i < Game.game_letters_pool[letter_val]; i++) {
+				available_letters.push(letter_val);
+			}
+		}
+
 		for(var i = 0; i < num_letters_to_draw; i++) {
-			var available_letters = Object.keys(Game.game_letters_pool);
 			var selected_letter = available_letters[ Math.floor(Math.random() * available_letters.length) ];
 
 			Game.game_letters_pool[selected_letter] -= 1;
