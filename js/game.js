@@ -185,6 +185,7 @@ var Game = {
 
 
 		/* If there is a screen's hash in the URL, open it directly. If it's the game-screen, load previously loaded game-save */
+		/* @TODO: Handle history navigation (click on prev/next buttons of the browser) */
 		var hash = document.location.hash;
 		if( hash ) {
 			if( hash == "#game-screen" ) {
