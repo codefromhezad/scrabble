@@ -41,11 +41,13 @@ var Game = {
 		alert(type + ': ' + message);
 	},
 
-	show_confirm_popup: function(message, on_confirm) {
+	show_confirm_popup: function(message, on_confirm, on_cancel) {
 		/* @TODO: Better Confirm Popups (errors, infos, etc...) */
 
 		if( confirm(message) ) {
 			on_confirm();
+		} else if( on_cancel ) {
+			on_cancel();
 		}
 	},
 
@@ -134,26 +136,42 @@ var Game = {
 				return;
 			}
 			
-			/* @TODO: Confirm user wants to overwrite if game name already used */
+			var new_game_closure = (function(game_name) {
+				return function() {
+					var list_of_players = [];
 
-			var list_of_players = [];
+					for(var i = 0; i < 4; i ++) {
+						var input_id = 'new-game-player-name-' + (i + 1);
+						var player_name = document.getElementById(input_id).value;
 
-			for(var i = 0; i < 4; i ++) {
-				var input_id = 'new-game-player-name-' + (i + 1);
-				var player_name = document.getElementById(input_id).value;
+						if(player_name) {
+							list_of_players.push({name: player_name, active: true});
+						}
+					}
 
-				if(player_name) {
-					list_of_players.push({name: player_name, active: true});
-				}
+					if( list_of_players.length < 2 ) {
+						Game.show_notice_popup('error', 'This game requires at least two players');
+						return;
+					}
+
+					Game.start_new_game(list_of_players, game_name);
+					Game.set_screen('#game-screen');
+				};
+			}) (game_name);
+
+			/* Confirm user wants to overwrite if game name already used */
+			var check_existing_game_name = localStorage.getItem(GAME_SAVES_LOCALSTORAGE_PREFIX + game_name);
+			if( check_existing_game_name !== null ) {
+				Game.show_confirm_popup('You are about to overwrite a previous save with the same name. Do you want to proceed ?', function() {
+					new_game_closure();
+				}, function() {
+					document.getElementById('new-game-game-name').value = '';
+				});
+			} else {
+				new_game_closure();
 			}
 
-			if( list_of_players.length < 2 ) {
-				Game.show_notice_popup('error', 'This game requires at least two players');
-				return;
-			}
-
-			Game.start_new_game(list_of_players, game_name);
-			Game.set_screen('#game-screen');
+			
 
 		}, false);
 
