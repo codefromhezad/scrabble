@@ -59,7 +59,7 @@ var Game = {
 		Game.screen_loading_callbacks[screen_selector].push(callback);
 	},
 
-	set_screen(screen_selector) {
+	show_screen(screen_selector) {
 		var target_screen_element = document.querySelector(screen_selector);
 
 		if( target_screen_element ) {
@@ -78,15 +78,39 @@ var Game = {
 				document.querySelector('.screen.current').classList.remove('current');
 				target_screen_element.classList.add('current');
 
-				document.location.hash = target_screen_element.getAttribute('id');
+				var screen_hash = target_screen_element.getAttribute('id');
+				var screen_title = target_screen_element.getAttribute('data-title');
+				var doc_title = (screen_title ? screen_title : screen_hash);
+
+				document.querySelector('head title').innerHTML = doc_title;
+				
+				return screen_hash;
 			}
 			
 		} else {
 			console.error('Can\'t find any element with selector "'+screen_selector+'"');
 		}
+
+		return false;
+	},
+
+	set_screen(screen_selector) {
+		var screen_hash = Game.show_screen(screen_selector);
+
+		if( screen_hash ) {
+			history.pushState({screen_hash: screen_hash}, '', '#' + screen_hash);
+		}
 	},
 
 	init_global_game_screens: function() {
+
+		/* Setup history/navigation handlers */
+		window.onpopstate = function(event) {
+			if( event.state && event.state.screen_hash ) {
+				Game.show_screen('#' + event.state.screen_hash);
+			}
+		};
+
 
 		/* Setup screens navigation listeners */
 		var screenLinks = document.querySelectorAll('.screen .screen-link');
@@ -171,8 +195,6 @@ var Game = {
 				new_game_closure();
 			}
 
-			
-
 		}, false);
 
 
@@ -204,22 +226,29 @@ var Game = {
 
 
 		/* If there is a screen's hash in the URL, open it directly. If it's the game-screen, load previously loaded game-save */
-		/* @TODO: Handle history navigation (click on prev/next buttons of the browser) */
-		var hash = document.location.hash;
-		if( hash ) {
-			if( hash == "#game-screen" ) {
-				var last_game_name = localStorage.getItem(GAME_GLOBAL_LOCALSTORAGE_PREFIX + 'last_game_name');
-				if( last_game_name ) {
-					Game.load_game_save(last_game_name);
-					Game.set_screen('#game-screen');
-				} else {
-					Game.set_screen('#title-screen');
-				}
-				return;
-			}
-
-			Game.set_screen(hash);
+		/* @TODO: Check history handling, looks like it works but there are some bugs here and there ...) */
+		if( history.state && history.state.screen_hash ) {
+			var hash = '#' + history.state.screen_hash;
+		} else {
+			var hash = document.location.hash;
 		}
+		
+		if( ! hash ) {
+			hash = '#title-screen';
+		}
+
+		if( hash == "#game-screen" ) {
+			var last_game_name = localStorage.getItem(GAME_GLOBAL_LOCALSTORAGE_PREFIX + 'last_game_name');
+			if( last_game_name ) {
+				Game.load_game_save(last_game_name);
+				Game.set_screen('#game-screen');
+			} else {
+				Game.set_screen('#title-screen');
+			}
+			return;
+		}
+
+		Game.set_screen(hash);
 	},
 
 	init_player_data: function(players_data, is_loading) {
