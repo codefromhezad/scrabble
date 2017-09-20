@@ -651,7 +651,7 @@ var Game = {
 			'</span>';
 
 		// Current player info
-		document.getElementById('info-block-current-player').innerHTML = Game.current_playing_player.name;
+		document.getElementById('info-block-current-player').innerHTML = Game.current_playing_player.name + '<small>'+Game.game_name+'</small>';
 
 		// Current player highlight
 		var currentPlayerDLEl = document.querySelector('#players-list .info-player-name.current');

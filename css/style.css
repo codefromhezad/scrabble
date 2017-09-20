@@ -212,6 +212,15 @@ html, body {
 	font-weight: 600;
 }
 
+#info-pane .info-block#info-block-current-turn #info-block-current-player small {
+	display: block;
+    font-size: 16px;
+    font-style: italic;
+    color: #b1a078;
+    position: relative;
+    top: -10px;
+}
+
 #info-pane .info-block#info-block-players dl {
 	overflow: hidden;
 }
