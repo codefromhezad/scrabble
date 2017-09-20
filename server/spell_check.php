@@ -53,7 +53,14 @@ foreach ($input_data as $input_param_name => $input_param_value) {
 		$input_param_value = rawurldecode($input_param_value);
 		$input_param_value = str_replace('"', "", $input_param_value);
 		$input_param_value = str_replace("'", "", $input_param_value);
+
+		if( $input_param_name == "word" ) {
+			$input_param_value = str_replace('*', '!', $input_param_value);
+		}
 		$processed_input_data[$input_param_name] = escapeshellcmd($input_param_value);
+		if( $input_param_name == "word" ) {
+			$processed_input_data[$input_param_name] = str_replace('!', '*', $processed_input_data[$input_param_name]);
+		}
 	} else {
 		send_return_data('error', $input_param_name.' is not a valid parameter for the spell-checker');
 	}
@@ -94,6 +101,7 @@ if( empty($processed_input_data['word']) ) {
 
 /* Run aspell command */
 $input_words = explode(' ', $processed_input_data['word']);
+
 $output_validity = array();
 $aspell_data = shell_exec('echo "'.$processed_input_data['word'].'" | '.ASPELL_PATH.' -a -d '.$processed_input_data['lang'].' 2>&1');
 

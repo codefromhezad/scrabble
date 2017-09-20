@@ -1,9 +1,17 @@
+/* Palette */
+/* #e0cc9b => Letters tile background */
+/* #b1a078 => Letters tile shadowed side background */
+/* #cdc6aa => Game board background color */
+/* #f7f0df => Game board lines color */
+
 html, body {
 	margin: 0;
 	padding: 0;
 	font-size: 16px;
 	font-family: 'News Cycle', Helvetica, Arial, Verdana, Sans;
 	color: #342f29;
+	height: 100%;
+	background: #f7f0df;
 }
 
 * {
@@ -13,11 +21,134 @@ html, body {
 
 .screen {
 	position: relative;
+	height: 100%;
 	display: none;
 }
 
 .screen.current {
 	display: block;
+}
+
+.screen-centerize-wrapper {
+	position: relative;
+	top: 50%;
+	transform: translateY(-50%);
+	padding-top: 1px;
+}
+
+.screen-title {
+	text-align: center;
+    margin: auto;
+    font-size: 60px;
+    position: absolute;
+    width: 100%;
+    top: 50px;
+}
+
+.return-to-title-link {
+	position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 30px;
+    text-decoration: none;
+    color: inherit;
+    height: 40px;
+    width: 40px;
+    line-height: 29px;
+    text-align: center;
+
+    transition: color 0.2s;
+}
+
+.return-to-title-link:focus,
+.return-to-title-link:hover {
+	color: #3e9eb5;
+}
+
+.screen-menu-button {
+	display: block;
+	border: 0;
+	margin: 50px auto;
+    width: 300px;
+    text-align: center;
+    color: #342f29;
+    text-decoration: none;
+    font-size: 35px;
+    font-weight: 600;
+    background: #e0cc9b;
+    line-height: 70px;;
+    box-shadow: 0px 6px 0px 0px #b1a078, 0px 7px 2px 1px rgba(0, 0, 0, 0.3), 0px 7px 0px 0px rgba(82, 74, 55, 0.52);
+    border-radius: 5px;
+    border-top: 1px solid #fbf4e2;
+    transform: translateY(0px);
+	cursor: pointer;
+    transition: filter 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.screen-menu-button:focus,
+.screen-menu-button:hover {
+	filter: brightness(1.1);
+	transform: translateY(0px);
+}
+
+.screen-menu-button:active {
+	box-shadow: 0px 2px 0px 0px #b1a078, 0px 3px 2px 1px rgba(0, 0, 0, 0.3), 0px 3px 0px 0px rgba(82, 74, 55, 0.52);
+	transform: translateY(4px);
+}
+
+.player-saved-game-wrapper {
+	text-align: center;
+}
+
+.player-saved-game-wrapper a {
+	display: inline-block;
+}
+
+.player-saved-game-wrapper a[data-loader] {
+	border-top-right-radius: 0;
+	border-bottom-right-radius: 0;
+}
+
+.player-saved-game-wrapper a[data-deleter] {
+	border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    width: auto;
+    padding: 0 20px;
+    background: #e09c9b;
+    box-shadow: 0px 6px 0px 0px #b17878, 0px 7px 2px 1px rgba(0, 0, 0, 0.3), 0px 7px 0px 0px rgba(82, 55, 55, 0.52);
+    color: #462929;
+}
+
+.player-saved-game-wrapper a[data-deleter]:active {
+	box-shadow: 0px 2px 0px 0px #b17878, 0px 3px 2px 1px rgba(0, 0, 0, 0.3), 0px 3px 0px 0px rgba(82, 55, 55, 0.52);
+}
+
+.screen-indications {
+	text-align: center;
+}
+
+.menu-input-wrapper {
+	overflow: hidden;
+    width: 50%;
+    margin: 20px auto;
+}
+
+.menu-input-wrapper .floater {
+	float: left;
+	width: 50%;
+}
+
+.menu-input-wrapper label {
+	display: block;
+	text-align: center;
+}
+
+.menu-input-wrapper input[type="text"] {
+	display: block;
+    width: 90%;
+    height: 40px;
+    line-height: 40px;
+    margin: auto;
 }
 
 #board {

@@ -10,68 +10,63 @@
 
 	<!-- TITLE SCREEN -->
 	<div id="title-screen" data-title="Title screen" class="screen current">
-		<a href="#new-game-screen" class="screen-link">New Game</a>
-		<a href="#load-game-screen" class="screen-link">Saved games</a>
+		<h2 class="screen-title">Scrabble clone</h2>
+		<div class="title-screen-inner screen-centerize-wrapper">
+			<a href="#new-game-screen" class="screen-link screen-menu-button">New Game</a>
+			<a href="#load-game-screen" class="screen-link screen-menu-button">Saved games</a>
+		</div>
 	</div>
 
 	<!-- START NEW GAME SCREEN -->
 	<div id="new-game-screen" data-title="New game screen" class="screen">
 		<h2 class="screen-title">New game</h2>
 
-		<div class="screen-content">
-			<div class="screen-indications">
-				Please choose a name for your game (so you'll find it in the saved games list) and enter the players name below and click "Start new game"
-			</div>
+		<div class="screen-content screen-centerize-wrapper">
 
-			<h3>Game name</h3>
-
-			<div class="game-name-input-wrapper">
+			<div class="game-name-input-wrapper menu-input-wrapper">
+				<label for="new-game-game-name">Choose a name for your game</label>
 				<input type="text" id="new-game-game-name">
 			</div>
 
-			<h3>Players</h3>
+			<div class="player-name-input-wrapper menu-input-wrapper">
+				<div class="floater">
+					<label for="new-game-player-name-1">Player 1 name</label>
+					<input type="text" id="new-game-player-name-1">
+				</div>
+				<div class="floater">
+					<label for="new-game-player-name-2">Player 2 name</label>
+					<input type="text" id="new-game-player-name-2">
+				</div>
+			</div>
 
-			<div class="player-name-input-wrapper">
-				Player 1 name
-				<input type="text" id="new-game-player-name-1">
+			<div class="player-name-input-wrapper menu-input-wrapper">
+				<div class="floater">
+					<label for="new-game-player-name-3">Player 3 name (Leave empty if no third player)</label>
+					<input type="text" id="new-game-player-name-3">
+				</div>
+				<div class="floater">
+					<label for="new-game-player-name-4">Player 4 name (Leave empty if no fourth player)</label>
+					<input type="text" id="new-game-player-name-4">
+				</div>
 			</div>
 
 			<div class="player-name-input-wrapper">
-				Player 2 name
-				<input type="text" id="new-game-player-name-2">
-			</div>
-
-			<div class="player-name-input-wrapper">
-				Player 3 name (Leave empty if no third player)
-				<input type="text" id="new-game-player-name-3">
-			</div>
-
-			<div class="player-name-input-wrapper">
-				Player 4 name (Leave empty if no fourth player)
-				<input type="text" id="new-game-player-name-4">
-			</div>
-
-			<div class="player-name-input-wrapper">
-				<button id="button-start-new-game">Start new game</button>
+				<button id="button-start-new-game" class="screen-menu-button">Start new game</button>
 			</div>
 		</div>
 
-		<div class="return-to-title-screen-wrapper">
-			<a href="#title-screen" class="screen-link">Back</a>
-		</div>
+		<a href="#title-screen" class="screen-link return-to-title-link">&#8592;</a>
 	</div>
 
 	<!-- LOAD A SAVED GAME SCREEN -->
 	<div id="load-game-screen" data-title="Load game screen" class="screen">
 		<h2 class="screen-title">Saved games</h2>
 
-		<div class="screen-content">
+		<div class="screen-content screen-centerize-wrapper">
 			
 		</div>
 
-		<div class="return-to-title-screen-wrapper">
-			<a href="#title-screen" class="screen-link">Back</a>
-		</div>
+		<a href="#title-screen" class="screen-link return-to-title-link">&#8592;</a>
 	</div>
 
 	<!-- MAIN GAME SCREEN -->

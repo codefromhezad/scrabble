@@ -152,8 +152,8 @@ var Game = {
 					var save_id = GAME_SAVES_LOCALSTORAGE_PREFIX + list_of_saved_games[i];
 
 					html_list += '<div class="player-saved-game-wrapper">'+
-						'<a href="#" data-loader data-save-id="'+save_id+'">'+list_of_saved_games[i]+'</a>'+
-						' <small><a href="#" data-deleter data-save-id="'+save_id+'">(Delete)</a></small>'+
+						'<a href="#" class="screen-menu-button" data-loader data-save-id="'+save_id+'">'+list_of_saved_games[i]+'</a>'+
+						'<a href="#" data-deleter class="screen-menu-button" data-save-id="'+save_id+'">&#10006;</a>'+
 					'</div>';
 				}
 
@@ -1048,8 +1048,6 @@ var Game = {
 			}
 
 			var primary_walker_cell_index = primary_word_bounds[0];
-
-			console.log(primary_word_bounds, primary_is_on_border_adder);
 
 			while(primary_walker_cell_index <= (primary_word_bounds[1] + primary_is_on_border_adder) ) {
 				words_found[0] += Game.current_cells_value[primary_walker_cell_index];
