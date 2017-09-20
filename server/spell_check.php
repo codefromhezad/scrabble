@@ -121,7 +121,7 @@ for($i = 0; $i < count($input_words); $i++) {
 		// Since Aspell doesn't handle the option "--ignore-accents" yet, 
 		// we have to compare aspell's suggestions to see if the accented
 		// word is in it (Scrabble doesn't have accented characters so ... Yeah ...)
-		$is_matching = preg_match('`^\& [a-z]+ [0-9]+ [0-9]+\: (.+)`', $result_line, $suggestions_matches);
+		$is_matching = preg_match('`^\& [a-zA-Z]+ [0-9]+ [0-9]+\: (.+)`', $result_line, $suggestions_matches);
 		
 		$output_validity[ $input_words[$i] ] = "invalid";
 
