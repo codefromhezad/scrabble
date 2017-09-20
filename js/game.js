@@ -791,7 +791,7 @@ var Game = {
 
 	check_words_validity: function(words, after_check_cb) {
 		// @TODO : Handle "joker" tiles in the spell-checker script
-		Request.post(GAME_SPELL_CHECKER_URL, {word: words, lang: Game.lang_data['__aspell_lang_code']}, function(xhr) {
+		Request.post(GAME_SPELL_CHECKER_URL, {word: words, lang: Game.lang_data['__aspell_lang_code'], locale: Game.lang_data['__server_locale']}, function(xhr) {
 			// Request success
 			var jsonResponse = JSON.parse(xhr.responseText);
 			

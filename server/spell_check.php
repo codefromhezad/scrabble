@@ -22,7 +22,7 @@ $input_data = $_POST;
 
 
 /* Define mandatory input data */
-$expected_input_params = array('lang', 'word');
+$expected_input_params = array('lang', 'locale', 'word');
 
 
 
@@ -37,6 +37,13 @@ function send_return_data($status, $message = "") {
 }
 
 
+/* Replace accents with plain characters. Might need to be updated if additionnal languages are added */
+/* Source before being edited: */
+function make_ascii_string($str) {
+	$converted_str = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $str);
+	$cleaned_str = preg_replace('/[^a-zA-Z0-9]/', '', $converted_str);
+	return $cleaned_str;
+}
 
 /* Check input parameters and sanitize their value for passing to bash script */
 $processed_input_data = array();
@@ -54,6 +61,13 @@ foreach ($input_data as $input_param_name => $input_param_value) {
 if( count($processed_input_data) != count($expected_input_params) ) {
 	send_return_data('error', 'Missing parameters for the spell-checker');
 }
+
+
+/* Setup server locale */
+$locale = $processed_input_data['locale'];
+setlocale(LC_ALL, $locale);
+putenv('LC_ALL='.$locale);
+
 
 /* Get a list of installed aspell dicts */
 $aspell_dicts = shell_exec(ASPELL_PATH.' dump dicts 2>&1');
@@ -98,9 +112,33 @@ if( $aspell_data_lines[0][0] != "@" ) {
 
 /* Finally check provided word is valid in selected lang or not ! */
 for($i = 0; $i < count($input_words); $i++) {
-	if( $aspell_data_lines[$i + 1][0] == "&" ) {
+	$result_line = $aspell_data_lines[$i + 1];
+
+	if( $result_line[0] == "&" ) {
+		// Since Aspell doesn't handle the option "--ignore-accents" yet, 
+		// we have to compare aspell's suggestions to see if the accented
+		// word is in it (Scrabble doesn't have accented characters so ... Yeah ...)
+		$is_matching = preg_match('`^\& [a-z]+ [0-9]+ 0\: (.+)`', $result_line, $suggestions_matches);
+		
 		$output_validity[ $input_words[$i] ] = "invalid";
-	} elseif( $aspell_data_lines[$i + 1][0] == "*" ) {
+
+		if( $is_matching ) {
+			$suggested_words = explode(', ', $suggestions_matches[1]);
+			
+
+			foreach($suggested_words as $j => $sugg_word) {
+				/* Remove accents and single quotes / apostrophes from suggested word */
+				$sugg_word = make_ascii_string($sugg_word);
+				
+				if( strtolower($sugg_word) == strtolower($input_words[$i]) ) {
+					$output_validity[ $input_words[$i] ] = "valid";
+					break;
+				}
+			}
+		}
+
+		
+	} elseif( $result_line[0] == "*" ) {
 		$output_validity[ $input_words[$i] ] = "valid";
 	}
 }
