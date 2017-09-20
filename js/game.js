@@ -3,6 +3,8 @@ var GAME_SPELL_CHECKER_URL = "./server/spell_check.php";
 
 var GAME_NUM_CELLS_PER_SIDE = 15;
 var GAME_NUM_LETTERS_PER_PLAYER = 7;
+var GAME_MAX_PREV_SAVES_TO_KEEP = 5;
+
 var GAME_SAVES_LOCALSTORAGE_PREFIX = 'scrabble_save_';
 var GAME_GLOBAL_LOCALSTORAGE_PREFIX = 'scrabble_global_';
 
@@ -30,6 +32,7 @@ var Game = {
 	special_tiles: {}, // Calculated in init()
 
 	history_repository: [],
+	saves_repository: [],
 
 	/***************
 	* INIT METHODS *
@@ -102,6 +105,20 @@ var Game = {
 		}
 	},
 
+	get_list_of_saved_games_name: function() {
+		var saved_games_name = [];
+		var game_key_match_regexp = new RegExp('^' + GAME_SAVES_LOCALSTORAGE_PREFIX + '(.+)');
+
+		for(var key in localStorage) {
+			var reg_checker = key.match(game_key_match_regexp);
+			if(reg_checker) {
+				saved_games_name.push(reg_checker[1]);
+			}
+		}
+
+		return saved_games_name;
+	},
+
 	init_global_game_screens: function() {
 
 		/* Setup history/navigation handlers */
@@ -126,21 +143,21 @@ var Game = {
 
 		/* Load saved games titles and show them on the load-game screen on screen load */
 		Game.before_screen_show('#load-game-screen', function() {
-			var list_of_saved_games = '';
-			var game_key_match_regexp = new RegExp('^' + GAME_SAVES_LOCALSTORAGE_PREFIX + '(.+)');
+			var list_of_saved_games = Game.get_list_of_saved_games_name();
 
-			for(var key in localStorage) {
-				var reg_checker = key.match(game_key_match_regexp);
-				if(reg_checker) {
-					list_of_saved_games += '<div class="player-saved-game-wrapper">'+
-												'<a href="#" data-loader data-save-id="'+reg_checker[1]+'">'+reg_checker[1]+'</a>'+
-												' <small><a href="#" data-deleter data-save-id="'+reg_checker[1]+'">(Delete)</a></small>'+
-											'</div>';
+			if( list_of_saved_games.length ) {
+				var html_list = '';
+
+				for(var i = 0; i < list_of_saved_games.length; i ++) {
+					var save_id = GAME_SAVES_LOCALSTORAGE_PREFIX + list_of_saved_games[i];
+
+					html_list += '<div class="player-saved-game-wrapper">'+
+						'<a href="#" data-loader data-save-id="'+save_id+'">'+list_of_saved_games[i]+'</a>'+
+						' <small><a href="#" data-deleter data-save-id="'+save_id+'">(Delete)</a></small>'+
+					'</div>';
 				}
-			}
 
-			if( list_of_saved_games ) {
-				document.querySelector('#load-game-screen .screen-content').innerHTML = list_of_saved_games;
+				document.querySelector('#load-game-screen .screen-content').innerHTML = html_list;
 				return true;
 			} else {
 				Game.show_notice_popup('error', 'No saved game found');
@@ -240,7 +257,7 @@ var Game = {
 		if( hash == "#game-screen" ) {
 			var last_game_name = localStorage.getItem(GAME_GLOBAL_LOCALSTORAGE_PREFIX + 'last_game_name');
 			if( last_game_name ) {
-				Game.load_game_save(last_game_name);
+				Game.load_game_save(GAME_SAVES_LOCALSTORAGE_PREFIX + last_game_name);
 				Game.set_screen('#game-screen');
 			} else {
 				Game.set_screen('#title-screen');
@@ -784,7 +801,9 @@ var Game = {
 		};
 	},
 
-	set_game_full_state: function(state_data_input) {
+	set_game_full_state: function(state_data_list) {
+		var state_data_input = state_data_list.pop();
+
 		Game.init_player_data(state_data_input.players, true);
 
 		Game.game_name = state_data_input.game_name;
@@ -798,6 +817,7 @@ var Game = {
 
 		Game.current_turn = state_data_input.current_turn;
 		Game.history_repository = state_data_input.history_repository;
+		Game.saves_repository = state_data_list;
 
 		Game.init();
 
@@ -847,27 +867,39 @@ var Game = {
 		/* Select starting player randomly */
 		var starting_player_id = Game.get_random_player_id();
 		Game.set_playing_player(starting_player_id);
+
+		Game.save_game_save();
 	},
 
 	save_game_save: function() {
 		var game_save_data = Game.get_game_full_state();
 
-		localStorage.setItem(GAME_SAVES_LOCALSTORAGE_PREFIX + Game.game_name, JSON.stringify(game_save_data));
+		if( Game.saves_repository.length >= GAME_MAX_PREV_SAVES_TO_KEEP ) {
+			Game.saves_repository.shift();
+		} 
+
+		Game.saves_repository.push(game_save_data);
+
+		localStorage.setItem(GAME_SAVES_LOCALSTORAGE_PREFIX + Game.game_name, JSON.stringify(Game.saves_repository));
+
+		Game.saves_repository[Game.saves_repository.length - 1].current_turn;
 	},
 
 	load_game_save: function(game_name) {
-		var raw_saved_data = localStorage.getItem(GAME_SAVES_LOCALSTORAGE_PREFIX + game_name);
+		var raw_saved_data = localStorage.getItem(game_name);
 
 		if( ! raw_saved_data ) {
 			console.error('Can\'t find any saved game called ' + game_name);
 			return;
 		}
 
-		Game.set_game_full_state(JSON.parse(raw_saved_data));
+		var state_data_list = JSON.parse(raw_saved_data);
+
+		Game.set_game_full_state(state_data_list);
 	},
 
 	delete_game_save: function(game_name) {
-		localStorage.removeItem(GAME_SAVES_LOCALSTORAGE_PREFIX + game_name);
+		localStorage.removeItem(game_name);
 	},
 
 	get_random_player_id: function() {
@@ -964,7 +996,6 @@ var Game = {
 				var secondary_walker_adder = GAME_NUM_CELLS_PER_SIDE;
 			}
 			
-			var primary_walker_cell_index = primary_word_bounds[0] !== null ? primary_word_bounds[0] + primary_walker_adder : 0;
 			var words_found = [];
 			words_found[0] = "";
 
@@ -988,7 +1019,39 @@ var Game = {
 				return [prev_adjacent_id, next_adjacent_id];
 			}
 
-			while(primary_walker_cell_index < primary_word_bounds[1]) {
+			var primary_is_on_border_adder = 0;
+
+			if(primary_word_bounds[0] === null ) {
+				var orig_coords = Game.conv_1d_to_2d(primary_word_bounds[1]);
+				if( Game.current_playing_player.current_word_direction == "vertical" ) {
+					orig_coords[1] = 0;
+				} else if( Game.current_playing_player.current_word_direction == "horizontal" ) {
+					orig_coords[0] = 0;
+				}
+
+				primary_word_bounds[0] = Game.conv_2d_to_1d(orig_coords);
+			} else {
+				primary_word_bounds[0] += primary_walker_adder;
+			}
+
+			if(primary_word_bounds[1] === null ) {
+				var orig_coords = Game.conv_1d_to_2d(primary_word_bounds[0]);
+				if( Game.current_playing_player.current_word_direction == "vertical" ) {
+					orig_coords[1] = GAME_NUM_CELLS_PER_SIDE - 1;
+				} else if( Game.current_playing_player.current_word_direction == "horizontal" ) {
+					orig_coords[0] = GAME_NUM_CELLS_PER_SIDE - 1;
+				}
+
+				primary_word_bounds[1] = Game.conv_2d_to_1d(orig_coords);
+			} else {
+				primary_word_bounds[1] -= primary_walker_adder;
+			}
+
+			var primary_walker_cell_index = primary_word_bounds[0];
+
+			console.log(primary_word_bounds, primary_is_on_border_adder);
+
+			while(primary_walker_cell_index <= (primary_word_bounds[1] + primary_is_on_border_adder) ) {
 				words_found[0] += Game.current_cells_value[primary_walker_cell_index];
 				
 				if( Game.current_playing_player.current_word_cells_id.indexOf(primary_walker_cell_index) != -1 ) { // If letter played by player
@@ -1004,6 +1067,7 @@ var Game = {
 						var new_word_cells = [];
 
 						var secondary_walker_cell_index = adj_ids[0];
+
 
 						// Find first id of subword
 						while(true) {
