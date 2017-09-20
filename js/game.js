@@ -673,8 +673,8 @@ var Game = {
 			'<div class="log-score">' + turn_history_data.score + '</div>'
 		];
 		var log_table = document.getElementById('log-list').getElementsByTagName('tbody')[0];
-		var new_row   = log_table.insertRow(log_table.rows.length);
 
+		var new_row = log_table.insertRow(0);
 		for(var i = 0; i < log_values.length; i++) {
 			var new_cell  = new_row.insertCell(i);
 			new_cell.innerHTML = log_values[i];

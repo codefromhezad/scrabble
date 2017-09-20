@@ -176,14 +176,13 @@ html, body {
 }
 
 #info-pane {
-	position: fixed;
-	top: 0;
-	right: 0;
-	height: 100%;
-	width: 420px;
-	background: #f7f0df;
-	border-left: 4px solid #cdc6aa;
-	z-index: 2;
+	position: absolute;
+    top: 0;
+    right: 0;
+    width: 420px;
+    background: #f7f0df;
+    border-left: 4px solid #cdc6aa;
+    z-index: 2;
 }
 
 #info-pane .info-block {
