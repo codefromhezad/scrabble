@@ -3,8 +3,8 @@ var GAME_SPELL_CHECKER_URL = "./server/spell_check.php";
 
 var GAME_NUM_CELLS_PER_SIDE = 15;
 var GAME_NUM_LETTERS_PER_PLAYER = 7;
-var GAME_APP_NODE_ID = "game-screen";
-var GAME_LOCALSTORAGE_PREFIX = 'scrabble_';
+var GAME_SAVES_LOCALSTORAGE_PREFIX = 'scrabble_save_';
+var GAME_GLOBAL_LOCALSTORAGE_PREFIX = 'scrabble_global_';
 
 var Game = {
 	settings: {
@@ -25,6 +25,7 @@ var Game = {
 	board_node: null,
 	last_hovered_cell_node: null,
 	app_already_initiated: false,
+	screen_loading_callbacks: {},
 
 	special_tiles: {}, // Calculated in init()
 
@@ -48,12 +49,36 @@ var Game = {
 		}
 	},
 
+	before_screen_show: function(screen_selector, callback) {
+		if( ! Game.screen_loading_callbacks[screen_selector] ) {
+			Game.screen_loading_callbacks[screen_selector] = [];
+		}
+
+		Game.screen_loading_callbacks[screen_selector].push(callback);
+	},
+
 	set_screen(screen_selector) {
 		var target_screen_element = document.querySelector(screen_selector);
 
 		if( target_screen_element ) {
-			document.querySelector('.screen.current').classList.remove('current');
-			target_screen_element.classList.add('current');
+			var show_screen = true;
+
+			var screen_callbacks = Game.screen_loading_callbacks[screen_selector];
+			if( screen_callbacks && screen_callbacks.length ) {
+				for(var i = 0; i < screen_callbacks.length; i++) {
+					if( screen_callbacks[i]() === false ) {
+						show_screen = false;
+					}
+				}
+			}
+
+			if( show_screen ) {
+				document.querySelector('.screen.current').classList.remove('current');
+				target_screen_element.classList.add('current');
+
+				document.location.hash = target_screen_element.getAttribute('id');
+			}
+			
 		} else {
 			console.error('Can\'t find any element with selector "'+screen_selector+'"');
 		}
@@ -109,12 +134,10 @@ var Game = {
 		}, false);
 
 
-		/* Setup load game button listener (Load saved games titles and show them on the load-game screen) */
-		document.getElementById('load-game-screen-button').addEventListener('click', function(event) {
-			event.preventDefault();
-
+		/* Load saved games titles and show them on the load-game screen on screen load */
+		Game.before_screen_show('#load-game-screen', function() {
 			var list_of_saved_games = '';
-			var game_key_match_regexp = new RegExp('^' + GAME_LOCALSTORAGE_PREFIX + '(.+)');
+			var game_key_match_regexp = new RegExp('^' + GAME_SAVES_LOCALSTORAGE_PREFIX + '(.+)');
 
 			for(var key in localStorage) {
 				var reg_checker = key.match(game_key_match_regexp);
@@ -128,12 +151,12 @@ var Game = {
 
 			if( list_of_saved_games ) {
 				document.querySelector('#load-game-screen .screen-content').innerHTML = list_of_saved_games;
-				Game.set_screen('#load-game-screen');
+				return true;
 			} else {
 				Game.show_notice_popup('error', 'No saved game found');
+				return false;
 			}
-			
-		}, false);
+		});
 
 
 		/* Setup click on saved game link in load game screen */
@@ -159,6 +182,24 @@ var Game = {
 			    
 			}
 		}, false);
+
+
+		/* If there is a screen's hash in the URL, open it directly. If it's the game-screen, load previously loaded game-save */
+		var hash = document.location.hash;
+		if( hash ) {
+			if( hash == "#game-screen" ) {
+				var last_game_name = localStorage.getItem(GAME_GLOBAL_LOCALSTORAGE_PREFIX + 'last_game_name');
+				if( last_game_name ) {
+					Game.load_game_save(last_game_name);
+					Game.set_screen('#game-screen');
+				} else {
+					Game.set_screen('#title-screen');
+				}
+				return;
+			}
+
+			Game.set_screen(hash);
+		}
 	},
 
 	init_player_data: function(players_data, is_loading) {
@@ -188,7 +229,7 @@ var Game = {
 	init: function() {
 
 		/* Save app_node */
-		Game.root_node = document.getElementById(GAME_APP_NODE_ID);
+		Game.root_node = document.getElementById('game-screen');
 		if( ! Game.root_node ) {
 			console.error("Game.init() expects the id of the root node (the game container) as its first argument.");
 			return false;
@@ -280,6 +321,9 @@ var Game = {
 
 
 		Game.app_already_initiated = true;
+
+		/* Save game name if player reloads page */
+		localStorage.setItem(GAME_GLOBAL_LOCALSTORAGE_PREFIX + 'last_game_name', Game.game_name);
 	},
 
 	load_lang_data: function(lang_slug) {
@@ -759,11 +803,11 @@ var Game = {
 	save_game_save: function() {
 		var game_save_data = Game.get_game_full_state();
 
-		localStorage.setItem(GAME_LOCALSTORAGE_PREFIX + Game.game_name, JSON.stringify(game_save_data));
+		localStorage.setItem(GAME_SAVES_LOCALSTORAGE_PREFIX + Game.game_name, JSON.stringify(game_save_data));
 	},
 
 	load_game_save: function(game_name) {
-		var raw_saved_data = localStorage.getItem(GAME_LOCALSTORAGE_PREFIX + game_name);
+		var raw_saved_data = localStorage.getItem(GAME_SAVES_LOCALSTORAGE_PREFIX + game_name);
 
 		if( ! raw_saved_data ) {
 			console.error('Can\'t find any saved game called ' + game_name);
@@ -774,7 +818,7 @@ var Game = {
 	},
 
 	delete_game_save: function(game_name) {
-		localStorage.removeItem(GAME_LOCALSTORAGE_PREFIX + game_name);
+		localStorage.removeItem(GAME_SAVES_LOCALSTORAGE_PREFIX + game_name);
 	},
 
 	get_random_player_id: function() {
@@ -1088,7 +1132,6 @@ var Game = {
 			} else {
 				// Oops there's an invalid word !
 
-				// @TODO: Prettier error message
 				// @TODO: Cancel player moves
 				Game.show_notice_popup('invalid', 'The following words were not found in the dictionnary : ' + invalid_words.join(','));
 			}
