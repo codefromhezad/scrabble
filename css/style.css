@@ -11,8 +11,13 @@ html, body {
 	padding: 0;
 }
 
-#app {
+.screen {
 	position: relative;
+	display: none;
+}
+
+.screen.current {
+	display: block;
 }
 
 #board {

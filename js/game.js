@@ -1,91 +1,233 @@
-var GAME_NUM_CELLS_PER_SIDE = 15;
-var GAME_NUM_LETTERS_PER_PLAYER = 7;
 
 var GAME_SPELL_CHECKER_URL = "./server/spell_check.php";
 
+var GAME_NUM_CELLS_PER_SIDE = 15;
+var GAME_NUM_LETTERS_PER_PLAYER = 7;
+var GAME_APP_NODE_ID = "game-screen";
+var GAME_LOCALSTORAGE_PREFIX = 'scrabble_';
+
 var Game = {
 	settings: {
-		game_lang: "french"
+		game_lang: "french",
 	},
 
+	game_name: null,
 	distribution_data: {},
 	lang_data: {},
 	current_cells_value: {},
 	game_letters_pool: {},
 
-	root_node: null,
-	board_node: null,
-
 	players: [],
 	current_playing_player: null,
 	current_turn: 0,
 
+	root_node: null,
+	board_node: null,
 	last_hovered_cell_node: null,
+	app_already_initiated: false,
 
 	special_tiles: {}, // Calculated in init()
 
+	history_repository: [],
 
 	/***************
 	* INIT METHODS *
 	****************/
 
-	init: function(app_node_id, players_data) {
+	show_notice_popup: function(type, message) {
+		/* @TODO: Better Notice Popups (errors, infos, etc...) */
 
-		/* Save app_node */
-		Game.root_node = document.getElementById(app_node_id);
-		if( ! Game.root_node ) {
-			console.error("Game.init() expects the id of the root node (the game container) as its first argument.");
-			return false;
+		alert(type + ': ' + message);
+	},
+
+	show_confirm_popup: function(message, on_confirm) {
+		/* @TODO: Better Confirm Popups (errors, infos, etc...) */
+
+		if( confirm(message) ) {
+			on_confirm();
 		}
+	},
 
+	set_screen(screen_selector) {
+		var target_screen_element = document.querySelector(screen_selector);
 
-		/* Load current lang letters distribution and score data, and UX lang data */
-		if( ! Game.load_lang_data(Game.settings.game_lang) ) {
-			return false;
+		if( target_screen_element ) {
+			document.querySelector('.screen.current').classList.remove('current');
+			target_screen_element.classList.add('current');
+		} else {
+			console.error('Can\'t find any element with selector "'+screen_selector+'"');
 		}
+	},
+
+	init_global_game_screens: function() {
+
+		/* Setup screens navigation listeners */
+		var screenLinks = document.querySelectorAll('.screen .screen-link');
+		for(var i = 0; i < screenLinks.length; i++) {
+			screenLinks[i].addEventListener('click', function(event) {
+				event.preventDefault();
+				
+				var screen_selector = event.target.getAttribute('href');
+				Game.set_screen(screen_selector);
+
+			}, false);
+		};
 
 
-		/* Setup/Reset game_letters_pool */
-		for(var letter in Game.distribution_data) {
-			Game.game_letters_pool[letter] = Game.distribution_data[letter].availability;
-		}
+		/* Setup new game button listener */
+		document.getElementById('button-start-new-game').addEventListener('click', function(event) {
+			event.preventDefault();
+			
+			var game_name = document.getElementById('new-game-game-name').value;
+
+			if( (! game_name) || game_name.match(/^\s+/) || game_name.length > 20 ) {
+				Game.show_notice_popup('error', 'The game name you chose is not valid (Can\'t be empty, start with spaces or contain more than 20 characters)');
+				return;
+			}
+			
+			/* @TODO: Confirm user wants to overwrite if game name already used */
+
+			var list_of_players = [];
+
+			for(var i = 0; i < 4; i ++) {
+				var input_id = 'new-game-player-name-' + (i + 1);
+				var player_name = document.getElementById(input_id).value;
+
+				if(player_name) {
+					list_of_players.push({name: player_name, active: true});
+				}
+			}
+
+			if( list_of_players.length < 2 ) {
+				Game.show_notice_popup('error', 'This game requires at least two players');
+				return;
+			}
+
+			Game.start_new_game(list_of_players, game_name);
+			Game.set_screen('#game-screen');
+
+		}, false);
 
 
-		/* Setup players data */
-		if( ! players_data || ! (players_data instanceof Array) || players_data.length < 2 ) {
-			console.error("Game.init() expects an array of objects defining players as its second argument. The array must have at least 2 elements.");
+		/* Setup load game button listener (Load saved games titles and show them on the load-game screen) */
+		document.getElementById('load-game-screen-button').addEventListener('click', function(event) {
+			event.preventDefault();
+
+			var list_of_saved_games = '';
+			var game_key_match_regexp = new RegExp('^' + GAME_LOCALSTORAGE_PREFIX + '(.+)');
+
+			for(var key in localStorage) {
+				var reg_checker = key.match(game_key_match_regexp);
+				if(reg_checker) {
+					list_of_saved_games += '<div class="player-saved-game-wrapper">'+
+												'<a href="#" data-loader data-save-id="'+reg_checker[1]+'">'+reg_checker[1]+'</a>'+
+												' <small><a href="#" data-deleter data-save-id="'+reg_checker[1]+'">(Delete)</a></small>'+
+											'</div>';
+				}
+			}
+
+			if( list_of_saved_games ) {
+				document.querySelector('#load-game-screen .screen-content').innerHTML = list_of_saved_games;
+				Game.set_screen('#load-game-screen');
+			} else {
+				Game.show_notice_popup('error', 'No saved game found');
+			}
+			
+		}, false);
+
+
+		/* Setup click on saved game link in load game screen */
+		document.getElementById('load-game-screen').addEventListener('click', function(event) {
+			var click_target = event.target;
+
+			if(click_target.hasAttribute('data-save-id')) {
+				event.preventDefault();
+				var save_id = click_target.getAttribute('data-save-id');
+
+				if( click_target.hasAttribute('data-loader') ) {
+				    Game.load_game_save(save_id);
+				    Game.set_screen('#game-screen');
+				} else if( click_target.hasAttribute('data-deleter') ) {
+					(function(save_id) {
+						Game.show_confirm_popup('Are you sure you wanna delete this save ? It will be definitely erased !', function() {
+							Game.delete_game_save(save_id);
+							Game.set_screen('#title-screen');
+						});
+					}) (save_id);
+					return;
+				}
+			    
+			}
+		}, false);
+	},
+
+	init_player_data: function(players_data, is_loading) {
+		if( ! players_data || obj_is_empty(players_data) || ! (players_data instanceof Array) || players_data.length < 2 ) {
+			console.error("Game.init_player_data() expects an array of objects defining players as its second argument. The array must have at least 2 elements.");
 			return false;
 		}
 
 		Game.players = players_data;
-		var players_list_dl_html = '';
 
 		for(var i = 0; i < Game.players.length; i++) {
-			Game.players[i].id = i;
-			Game.players[i].current_score = 0;
+			if( ! is_loading ) {
+				Game.players[i].id = i;
+				Game.players[i].current_score = 0;
+				Game.players[i].letters_pool = [];
+				Game.players[i].next_player_id = ( (i + 1) < Game.players.length ? (i + 1) : 0 );
+			}
+			
 			Game.players[i].current_word_direction = null;
 			Game.players[i].current_played_words = "";
 			Game.players[i].current_played_cells_by_word = [];
 			Game.players[i].current_word_cells_id = [];
 			Game.players[i].current_allowed_cells = null;
-			Game.players[i].letters_pool = [];
-			Game.players[i].next_player_id = ( (i + 1) < Game.players.length ? (i + 1) : 0 );
+		}
+	},
 
+	init: function() {
+
+		/* Save app_node */
+		Game.root_node = document.getElementById(GAME_APP_NODE_ID);
+		if( ! Game.root_node ) {
+			console.error("Game.init() expects the id of the root node (the game container) as its first argument.");
+			return false;
+		}
+
+		/* Data not to be initiated when loading a game (already loaded and processed) */
+		if( ! Game.app_already_initiated ) {
+			/* Generate info-pane node */
+			var info_pane_node = document.createElement('div');
+			info_pane_node.setAttribute('id', 'info-pane');
+			Game.root_node.appendChild(info_pane_node);
+		
+		} else {
+			var info_pane_node = document.getElementById('info-pane');
+		}
+
+
+		/* Load current lang letters distribution and score data, and UX lang data */
+		if( obj_is_empty(Game.distribution_data) ) {
+			if( ! Game.load_lang_data(Game.settings.game_lang) ) {
+				return false;
+			}
+		}
+
+		/* Setup/Reset game_letters_pool */
+		if( obj_is_empty(Game.game_letters_pool) ) {
+			for(var letter in Game.distribution_data) {
+				Game.game_letters_pool[letter] = Game.distribution_data[letter].availability;
+			}
+		}
+		
+
+		/* Generate content for info-pane node */
+		var players_list_dl_html = '';
+		for(var i = 0; i < Game.players.length; i++) {
 			players_list_dl_html += 
 				'<dt id="info-players-name-'+i+'" class="info-player-name">'+Game.players[i].name+'</dt>'+
 				'<dd id="info-players-score-'+i+'" class="info-player-score">'+Game.players[i].current_score+' points</dd>';
 		}
-
-
-		/* Generate board node and inner board cells
-			and then find special tiles positions and
-			update board CSS */
-		Game.generate_board_node();
-		Game.generate_special_tiles();
-
-		/* Generate info-pane node */
-		var info_pane_node = document.createElement('div');
-		info_pane_node.setAttribute('id', 'info-pane');
 
 		var info_pane_html = 
 			'<div id="info-block-current-turn" class="info-block">'+
@@ -118,17 +260,15 @@ var Game = {
 				'</table>'+
 			'</div>';
 		info_pane_node.innerHTML = info_pane_html;
-		Game.root_node.appendChild(info_pane_node);
+	
 
 
-		/* Init starting players letters pool */
-		for(var i = 0; i < Game.players.length; i++) {
-			Game.pick_letters_for_player(Game.players[i].id);
 
-			if( Game.players[i].active ) {
-				Game.render_player_letters_pool(Game.players[i].id);
-			}
-		}
+		/* Generate board node and inner board cells
+			and then find special tiles positions and
+			update board CSS */
+		Game.generate_board_node();
+		Game.generate_special_tiles();
 
 
 		/* Init UX vendor libraries */
@@ -139,9 +279,7 @@ var Game = {
 		Game.register_ux_listeners();
 
 
-		/* Select starting player randomly */
-		var starting_player_id = Game.get_random_player_id();
-		Game.set_playing_player(starting_player_id);
+		Game.app_already_initiated = true;
 	},
 
 	load_lang_data: function(lang_slug) {
@@ -478,6 +616,26 @@ var Game = {
 		}
 	},
 
+	add_log_row_from_turn_data: function(turn_history_data) {
+		var played_words_html_title = turn_history_data.words.replace(/\+/g, ' + ');
+		var player_name = Game.players[turn_history_data.player_id].name;
+
+		// Update info pane log table
+		var log_values = [
+			'<div class="log-turn">' + (turn_history_data.turn + 1) + '</div>', 
+			'<div class="log-player" title="'+player_name+'">' + player_name + '</div>', 
+			'<div class="log-words" title="'+played_words_html_title+'">' + turn_history_data.words_log_html + '</div>', 
+			'<div class="log-score">' + turn_history_data.score + '</div>'
+		];
+		var log_table = document.getElementById('log-list').getElementsByTagName('tbody')[0];
+		var new_row   = log_table.insertRow(log_table.rows.length);
+
+		for(var i = 0; i < log_values.length; i++) {
+			var new_cell  = new_row.insertCell(i);
+			new_cell.innerHTML = log_values[i];
+		}
+	},
+
 	update_info_pane_values: function() {
 		// Players score indicator
 		for(var i = 0; i < Game.players.length; i++) {
@@ -506,6 +664,118 @@ var Game = {
 	/*******************
 	* GAMEPLAY METHODS *
 	********************/
+
+	push_turn_data_to_history: function(turn_data) {
+		// turn_data format expected: {turn, player_id, words (separated by "+"), score, words_log_html}
+		Game.history_repository.push(turn_data);
+	},
+
+	get_game_full_state: function() {
+
+		return {
+			game_name: Game.game_name,
+
+			settings: Game.settings,
+			distribution_data: Game.distribution_data,
+			lang_data: Game.lang_data,
+			
+			current_cells_value: Game.current_cells_value,
+			game_letters_pool: Game.game_letters_pool,
+
+			players: Game.players,
+
+			current_playing_player_id: Game.current_playing_player.id,
+			current_turn: Game.current_turn,
+
+			history_repository: Game.history_repository
+		};
+	},
+
+	set_game_full_state: function(state_data_input) {
+		Game.init_player_data(state_data_input.players, true);
+
+		Game.game_name = state_data_input.game_name;
+		
+		Game.settings = state_data_input.settings;
+		Game.distribution_data = state_data_input.distribution_data;
+		Game.lang_data = state_data_input.lang_data;
+
+		Game.current_cells_value = state_data_input.current_cells_value;
+		Game.game_letters_pool = state_data_input.game_letters_pool;
+
+		Game.current_turn = state_data_input.current_turn;
+		Game.history_repository = state_data_input.history_repository;
+
+		Game.init();
+
+		/* Init loaded players letters pool */
+		for(var i = 0; i < Game.players.length; i++) {
+			Game.pick_letters_for_player(Game.players[i].id);
+
+			if( Game.players[i].active ) {
+				Game.render_player_letters_pool(Game.players[i].id);
+			}
+		}
+
+		Game.set_playing_player(state_data_input.current_playing_player_id);
+
+		/* Load/Render tiles on board */
+		for(var cell_id in Game.current_cells_value) {
+			var letter_value = Game.current_cells_value[cell_id];
+			var cell_element = document.querySelector('.cell[data-index="'+cell_id+'"]');
+			var tile_element = Game.generate_letter_tile_html(letter_value, true);
+
+			cell_element.appendChild(tile_element);
+			cell_element.setAttribute('data-letter', letter_value);
+		}
+
+		/* Load/Render log info data */
+		for(var i in Game.history_repository) {
+			turn_history_data = Game.history_repository[i];
+			Game.add_log_row_from_turn_data(turn_history_data)
+		}
+	},
+
+	start_new_game: function(players_data, game_name) {
+		Game.game_name = game_name;
+
+		Game.init_player_data(players_data);
+		Game.init();
+
+		/* Init starting players letters pool */
+		for(var i = 0; i < Game.players.length; i++) {
+			Game.pick_letters_for_player(Game.players[i].id);
+
+			if( Game.players[i].active ) {
+				Game.render_player_letters_pool(Game.players[i].id);
+			}
+		}
+
+		/* Select starting player randomly */
+		var starting_player_id = Game.get_random_player_id();
+		Game.set_playing_player(starting_player_id);
+	},
+
+	save_game_save: function() {
+		var game_save_data = Game.get_game_full_state();
+
+		localStorage.setItem(GAME_LOCALSTORAGE_PREFIX + Game.game_name, JSON.stringify(game_save_data));
+	},
+
+	load_game_save: function(game_name) {
+		var raw_saved_data = localStorage.getItem(GAME_LOCALSTORAGE_PREFIX + game_name);
+
+		if( ! raw_saved_data ) {
+			console.error('Can\'t find any saved game called ' + game_name);
+			return;
+		}
+
+		Game.set_game_full_state(JSON.parse(raw_saved_data));
+	},
+
+	delete_game_save: function(game_name) {
+		localStorage.removeItem(GAME_LOCALSTORAGE_PREFIX + game_name);
+	},
 
 	get_random_player_id: function() {
 		return Math.floor(Math.random() * Game.players.length);
@@ -673,6 +943,30 @@ var Game = {
 			
 			Game.current_playing_player.current_played_words = words_found.join('+');
 			Game.current_playing_player.current_played_cells_by_word = cells_found;
+		
+		} else {
+			// If no letter were placed, player is passing his turn
+			var turn_history_data = {
+				turn: Game.current_turn, 
+				player_id: Game.current_playing_player.id, 
+				words: "", 
+				words_log_html: "<span></span>",
+				score: 0
+			};
+			Game.push_turn_data_to_history(turn_history_data);
+			Game.add_log_row_from_turn_data(turn_history_data);
+
+			// Increment turn variable
+			Game.current_turn += 1;
+
+			// Set turn to next player
+			Game.set_playing_player(Game.current_playing_player.next_player_id);
+
+			// Save game
+			Game.save_game_save();
+
+			// Skip Word Spellchecking
+			return;
 		}
 
 		Game.check_words_validity(Game.current_playing_player.current_played_words.replace('+', ' '), function(invalid_words) {
@@ -744,22 +1038,15 @@ var Game = {
 
 				Game.current_playing_player.current_score += turn_score;
 
-				var played_words_html_title = Game.current_playing_player.current_played_words.replace(/\+/g, ' + ');
-
-				// Update info pane log table
-				var log_values = [
-					'<div class="log-turn">' + (Game.current_turn + 1) + '</div>', 
-					'<div class="log-player" title="'+Game.current_playing_player.name+'">' + Game.current_playing_player.name + '</div>', 
-					'<div class="log-words" title="'+played_words_html_title+'">' + words_log_html + '</div>', 
-					'<div class="log-score">' + turn_score + '</div>'
-				];
-				var log_table = document.getElementById('log-list').getElementsByTagName('tbody')[0];
-				var new_row   = log_table.insertRow(log_table.rows.length);
-
-				for(var i = 0; i < log_values.length; i++) {
-					var new_cell  = new_row.insertCell(i);
-					new_cell.innerHTML = log_values[i];
-				}
+				var turn_history_data = {
+					turn: Game.current_turn, 
+					player_id: Game.current_playing_player.id, 
+					words: Game.current_playing_player.current_played_words, 
+					words_log_html: words_log_html,
+					score: turn_score
+				};
+				Game.push_turn_data_to_history(turn_history_data);
+				Game.add_log_row_from_turn_data(turn_history_data);
 
 				var current_turn_tiles = document.querySelectorAll('.current-turn-letter-tile');
 				for(var i = 0; i < current_turn_tiles.length; i++) {
@@ -768,16 +1055,20 @@ var Game = {
 				
 				// Increment turn variable
 				Game.current_turn += 1;
-				
+
 				// Set turn to next player
 				Game.set_playing_player(Game.current_playing_player.next_player_id);
+
+				// Save game
+				Game.save_game_save();
+			
 
 			} else {
 				// Oops there's an invalid word !
 
 				// @TODO: Prettier error message
 				// @TODO: Cancel player moves
-				alert('The following words were not found in the dictionnary : ' + invalid_words.join(','));
+				Game.show_notice_popup('invalid', 'The following words were not found in the dictionnary : ' + invalid_words.join(','));
 			}
 		});
 
@@ -944,7 +1235,7 @@ var Game = {
 		}
 	},
 
-	generate_letter_tile_html: function(letter) {
+	generate_letter_tile_html: function(letter, asDOMElement) {
 		var letter_score = Game.distribution_data[letter].score_value;
 
 		var letter_html = letter;
@@ -957,15 +1248,26 @@ var Game = {
 			blank_class = 'is-blank';
 		}
 
-		return '<span class="letter-tile '+blank_class+'" '+
+		var html_code = '<span class="letter-tile '+blank_class+'" '+
 			'data-letter="'+letter+'" '+
 			'data-score="'+letter_score+'">'+
 				letter_html+
 				'<sub>'+letter_score_html+'</sub>'+
 			'</span>';
+
+		if( asDOMElement ) {
+			var div = document.createElement('div');
+			div.innerHTML = html_code;
+			return div.firstChild;
+		} 
+		
+		return html_code;
+	
 	},
 
 	pick_letters_for_player: function(player_id) {
+		// @TODO : Check randomness of the "random" selection. It looks like vowels 
+		// are selected quite rarely but I may be wrong
 		var player = Game.players[player_id];
 		var num_letters_to_draw = GAME_NUM_LETTERS_PER_PLAYER - player.letters_pool.length;
 

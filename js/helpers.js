@@ -8,6 +8,15 @@ var obj_merge = function(){
     return return_obj;
 }
 
+var obj_is_empty = function(obj) {
+	for(var prop in obj) {
+        if(obj.hasOwnProperty(prop))
+            return false;
+    }
+
+    return JSON.stringify(obj) === JSON.stringify({});
+}
+
 var Request = {
 	param: function(object) {
 	    var encodedString = '';

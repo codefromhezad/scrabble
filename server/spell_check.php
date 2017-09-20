@@ -72,6 +72,11 @@ if( ! in_array($processed_input_data['lang'], $aspell_dicts_list) ) {
 	send_return_data('error', '[aspell] Can\'t find a dictionary for the lang "'.$processed_input_data['lang'].'".');
 }
 
+/* Check words input is not empty */
+if( empty($processed_input_data['word']) ) {
+	send_return_data('error', 'Empty list of words.');
+}
+
 /* Run aspell command */
 $input_words = explode(' ', $processed_input_data['word']);
 $output_validity = array();
