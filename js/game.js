@@ -98,6 +98,30 @@ var Game = {
 			}, false);
 		};
 
+		/* Load saved games titles and show them on the load-game screen on screen load */
+		Game.before_screen_show('#load-game-screen', function() {
+			var list_of_saved_games = '';
+			var game_key_match_regexp = new RegExp('^' + GAME_SAVES_LOCALSTORAGE_PREFIX + '(.+)');
+
+			for(var key in localStorage) {
+				var reg_checker = key.match(game_key_match_regexp);
+				if(reg_checker) {
+					list_of_saved_games += '<div class="player-saved-game-wrapper">'+
+												'<a href="#" data-loader data-save-id="'+reg_checker[1]+'">'+reg_checker[1]+'</a>'+
+												' <small><a href="#" data-deleter data-save-id="'+reg_checker[1]+'">(Delete)</a></small>'+
+											'</div>';
+				}
+			}
+
+			if( list_of_saved_games ) {
+				document.querySelector('#load-game-screen .screen-content').innerHTML = list_of_saved_games;
+				return true;
+			} else {
+				Game.show_notice_popup('error', 'No saved game found');
+				return false;
+			}
+		});
+
 
 		/* Setup new game button listener */
 		document.getElementById('button-start-new-game').addEventListener('click', function(event) {
@@ -134,32 +158,9 @@ var Game = {
 		}, false);
 
 
-		/* Load saved games titles and show them on the load-game screen on screen load */
-		Game.before_screen_show('#load-game-screen', function() {
-			var list_of_saved_games = '';
-			var game_key_match_regexp = new RegExp('^' + GAME_SAVES_LOCALSTORAGE_PREFIX + '(.+)');
 
-			for(var key in localStorage) {
-				var reg_checker = key.match(game_key_match_regexp);
-				if(reg_checker) {
-					list_of_saved_games += '<div class="player-saved-game-wrapper">'+
-												'<a href="#" data-loader data-save-id="'+reg_checker[1]+'">'+reg_checker[1]+'</a>'+
-												' <small><a href="#" data-deleter data-save-id="'+reg_checker[1]+'">(Delete)</a></small>'+
-											'</div>';
-				}
-			}
-
-			if( list_of_saved_games ) {
-				document.querySelector('#load-game-screen .screen-content').innerHTML = list_of_saved_games;
-				return true;
-			} else {
-				Game.show_notice_popup('error', 'No saved game found');
-				return false;
-			}
-		});
-
-
-		/* Setup click on saved game link in load game screen */
+		/* Setup click on saved game links in load game screen */
+		/* Suppression and opening of saved games is handled here */
 		document.getElementById('load-game-screen').addEventListener('click', function(event) {
 			var click_target = event.target;
 
@@ -174,7 +175,7 @@ var Game = {
 					(function(save_id) {
 						Game.show_confirm_popup('Are you sure you wanna delete this save ? It will be definitely erased !', function() {
 							Game.delete_game_save(save_id);
-							Game.set_screen('#title-screen');
+							Game.set_screen('#load-game-screen');
 						});
 					}) (save_id);
 					return;
