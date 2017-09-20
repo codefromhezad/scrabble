@@ -27,11 +27,12 @@ $expected_input_params = array('lang', 'locale', 'word');
 
 
 /* Helper to stop processing and send JSON data */
-function send_return_data($status, $message = "") {
+function send_return_data($status, $message = "", $additionnal_data = null) {
 	header('Content-type:application/json;charset=utf-8');
 	echo json_encode(array(
 		"status" => $status,
-		"message" => $message
+		"message" => $message,
+		"additionnal_data" => $additionnal_data
 	));
 	die;
 }
@@ -111,20 +112,23 @@ if( $aspell_data_lines[0][0] != "@" ) {
 }
 
 /* Finally check provided word is valid in selected lang or not ! */
+$output_suggested_words = [];
 for($i = 0; $i < count($input_words); $i++) {
 	$result_line = $aspell_data_lines[$i + 1];
+	$output_line_suggested_words = [];
 
 	if( $result_line[0] == "&" ) {
 		// Since Aspell doesn't handle the option "--ignore-accents" yet, 
 		// we have to compare aspell's suggestions to see if the accented
 		// word is in it (Scrabble doesn't have accented characters so ... Yeah ...)
-		$is_matching = preg_match('`^\& [a-z]+ [0-9]+ 0\: (.+)`', $result_line, $suggestions_matches);
+		$is_matching = preg_match('`^\& [a-z]+ [0-9]+ [0-9]+\: (.+)`', $result_line, $suggestions_matches);
 		
 		$output_validity[ $input_words[$i] ] = "invalid";
 
 		if( $is_matching ) {
 			$suggested_words = explode(', ', $suggestions_matches[1]);
 			
+			$output_line_suggested_words = $suggested_words;
 
 			foreach($suggested_words as $j => $sugg_word) {
 				/* Remove accents and single quotes / apostrophes from suggested word */
@@ -135,13 +139,18 @@ for($i = 0; $i < count($input_words); $i++) {
 					break;
 				}
 			}
-		}
 
+		} else {
+			send_return_data('error', "[aspell] Can't parse the next aspell output line: \n".$result_line);
+		}
 		
 	} elseif( $result_line[0] == "*" ) {
+		$output_line_suggested_words = '*';
 		$output_validity[ $input_words[$i] ] = "valid";
 	}
+
+	$output_suggested_words[$input_words[$i]] = $output_line_suggested_words;
 }
 
-send_return_data('ok', $output_validity);
+send_return_data('ok', $output_validity, $output_suggested_words);
 

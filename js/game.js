@@ -789,23 +789,36 @@ var Game = {
 		return count;
 	},
 
+	log_close_words(words) {
+		Game.check_words_validity(words, function(response) {
+			if( response.additionnal_data && ! obj_is_empty(response.additionnal_data) ) {
+				console.log('----------------------------------'); 
+				for(var orig_word in response.additionnal_data) {
+					var suggestions = response.additionnal_data[orig_word];
+					if( suggestions == "*" ) {
+						console.log(orig_word + " => " + "*");
+					} else {
+						console.log(orig_word + " => " + suggestions.join(', '));
+					}
+				}
+				console.log('----------------------------------'); 
+			}
+			
+		});
+	},
+
 	check_words_validity: function(words, after_check_cb) {
 		// @TODO : Handle "joker" tiles in the spell-checker script
-		Request.post(GAME_SPELL_CHECKER_URL, {word: words, lang: Game.lang_data['__aspell_lang_code'], locale: Game.lang_data['__server_locale']}, function(xhr) {
+		Request.post(GAME_SPELL_CHECKER_URL, {
+			word: words, 
+			lang: Game.lang_data['__aspell_lang_code'], 
+			locale: Game.lang_data['__server_locale'],
+		}, function(xhr) {
 			// Request success
 			var jsonResponse = JSON.parse(xhr.responseText);
 			
 			if( jsonResponse.status && jsonResponse.status == "ok" ) {
-				var words_validity = jsonResponse.message;
-				var invalid_words = [];
-
-				for(var v_word in words_validity) {
-					if( words_validity[v_word] == "invalid" ) {
-						invalid_words.push(v_word);
-					}
-				}
-
-				after_check_cb(invalid_words);
+				after_check_cb(jsonResponse);
 			} else {
 				console.error('An error occured on the server');
 				console.error('[DEBUG] SERVER MESSAGE :');
@@ -969,8 +982,17 @@ var Game = {
 			return;
 		}
 
-		Game.check_words_validity(Game.current_playing_player.current_played_words.replace('+', ' '), function(invalid_words) {
+		Game.check_words_validity(Game.current_playing_player.current_played_words.replace('+', ' '), function(jsonResponse) {
 			
+			var words_validity = jsonResponse.message;
+			var invalid_words = [];
+
+			for(var v_word in words_validity) {
+				if( words_validity[v_word] == "invalid" ) {
+					invalid_words.push(v_word);
+				}
+			}
+
 			if( invalid_words.length == 0 ) {
 				// Valid turn !
 
