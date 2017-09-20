@@ -12,7 +12,7 @@
  */
 
 
-define('ASPELL_PATH', '/usr/local/bin/aspell');
+require('conf.php');
 
 
 
@@ -129,7 +129,7 @@ for($i = 0; $i < count($input_words); $i++) {
 			foreach($suggested_words as $j => $sugg_word) {
 				/* Remove accents and single quotes / apostrophes from suggested word */
 				$sugg_word = make_ascii_string($sugg_word);
-				
+
 				if( strtolower($sugg_word) == strtolower($input_words[$i]) ) {
 					$output_validity[ $input_words[$i] ] = "valid";
 					break;

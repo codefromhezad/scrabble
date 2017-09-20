@@ -24,7 +24,7 @@ brew install aspell
 ```bash
 which aspell
 ```
-and use this value to set the `ASPELL_PATH` define at the top of `server/spell_check.php` if it's different.
+and copy the path you get to set the `ASPELL_PATH` value in the file `server/conf.php`.
 
 
 ## Log Book 
